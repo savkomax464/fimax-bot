@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -10,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=7">
 </head>
+
 <body>
     <!-- Контейнер для кастомных уведомлений (toasts) -->
     <div id="toast-container" class="toast-container"></div>
@@ -19,9 +21,10 @@
         <div class="sidebar-wrapper">
             <aside class="sidebar">
                 <div class="sidebar-brand">
-                    <div class="logo"><div class="logo-box"></div><span>FiMax</span></div>
+                    <div class="logo">
+                        <div class="logo-box"></div><span>FiMax</span></div>
                 </div>
-                
+
                 <nav class="nav-group">
                     <div class="nav-item nav-link active" data-page="main">
                         <div style="display:flex; align-items:center; gap:12px; width:100%;">
@@ -63,7 +66,7 @@
 
             <!-- 1. СТРАНИЦА MAIN (Dashboard) -->
             <div id="page-main" class="page active">
-                
+
                 <!-- Модалки -->
                 <div class="modal-overlay" id="modalWeeklySummary">
                     <div class="modal-card" style="text-align: center;">
@@ -146,7 +149,8 @@
                             <div id="market-pulse-content" style="margin-top: 15px;"></div>
                         </div>
                         <div class="card col-4" id="smart-insight-card">
-                            <div class="card-title"><div class="ai-badge">✦</div> Smart Insight</div>
+                            <div class="card-title">
+                                <div class="ai-badge">✦</div> Smart Insight</div>
                             <div id="smart-insight-content" style="margin-top: 15px; font-size: 14px; color: var(--text-sec); line-height: 1.6;"></div>
                         </div>
                         <div class="card col-4 perf-gradient">
@@ -179,29 +183,27 @@
 
                     <!-- НОВЫЙ БЛОК: Поиск и Фильтры (Имя + Категория) -->
                     <div style="margin-bottom: 24px; display: flex; gap: 12px; align-items: center; z-index: 100; position: relative;">
-                        
+
                         <!-- Поле поиска -->
                         <div style="flex: 1; position: relative;">
                             <input type="text" id="portfolioSearch" class="inline-input" placeholder="Search assets by name or category..." style="width: 100%; padding-left: 48px; border-radius: 20px; height: 53px; box-sizing: border-box;">
                             <svg style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-sec);" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                         </div>
-                        
+
                         <!-- Прозрачная кнопка-иконка (3 палочки) -->
                         <div class="rec-wrapper" style="position: relative;">
-                            <button style="background: transparent; border: 1px solid var(--border); color: var(--text-sec); width: 53px; height: 53px; border-radius: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;" 
-                                    onclick="toggleFilterPop(event)" 
-                                    onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#fff';" 
-                                    onmouseout="this.style.background='transparent'; this.style.color='var(--text-sec)';">
+                            <button style="background: transparent; border: 1px solid var(--border); color: var(--text-sec); width: 53px; height: 53px; border-radius: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;"
+                                onclick="toggleFilterPop(event)" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#fff';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-sec)';">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="4" y1="6" x2="20" y2="6"></line>
                                     <line x1="6" y1="12" x2="18" y2="12"></line>
                                     <line x1="8" y1="18" x2="16" y2="18"></line>
                                 </svg>
                             </button>
-                            
+
                             <!-- Всплывающее меню (макс. высота и скролл на случай если будет много активов) -->
                             <div class="rec-popover" id="filter-pop" onclick="event.stopPropagation()" style="width: 260px; right: 0; left: auto; top: calc(100% + 10px); max-height: 400px; overflow-y: auto;">
-                                
+
                                 <span class="card-label">Filter by Asset Name</span>
                                 <div id="filterNameList" style="display: flex; flex-direction: column; gap: 4px; margin-top: 10px; margin-bottom: 20px;">
                                     <!-- Список Имен генерируется через JS -->
@@ -211,7 +213,7 @@
                                 <div id="filterCategoryList" style="display: flex; flex-direction: column; gap: 4px; margin-top: 10px;">
                                     <!-- Список Категорий генерируется через JS -->
                                 </div>
-                                
+
                             </div>
                         </div>
                     </div>
@@ -265,20 +267,18 @@
                             <input type="text" id="analyticsSearch" class="inline-input" placeholder="Search analytics by asset or category..." style="width: 100%; padding-left: 48px; border-radius: 20px; height: 53px; box-sizing: border-box;">
                             <svg style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-sec);" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                         </div>
-                        
+
                         <!-- Прозрачная кнопка-иконка (3 палочки) -->
                         <div class="rec-wrapper" style="position: relative;">
-                            <button style="background: transparent; border: 1px solid var(--border); color: var(--text-sec); width: 53px; height: 53px; border-radius: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;" 
-                                    onclick="toggleAnalyticsFilterPop(event)" 
-                                    onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#fff';" 
-                                    onmouseout="this.style.background='transparent'; this.style.color='var(--text-sec)';">
+                            <button style="background: transparent; border: 1px solid var(--border); color: var(--text-sec); width: 53px; height: 53px; border-radius: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;"
+                                onclick="toggleAnalyticsFilterPop(event)" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#fff';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-sec)';">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="4" y1="6" x2="20" y2="6"></line>
                                     <line x1="6" y1="12" x2="18" y2="12"></line>
                                     <line x1="8" y1="18" x2="16" y2="18"></line>
                                 </svg>
                             </button>
-                            
+
                             <!-- Всплывающее меню фильтров -->
                             <div class="rec-popover" id="analytics-filter-pop" onclick="event.stopPropagation()" style="width: 260px; right: 0; left: auto; top: calc(100% + 10px); max-height: 400px; overflow-y: auto;">
                                 <span class="card-label">Filter by Asset Name</span>
@@ -292,10 +292,21 @@
 
                     <div id="analytics-content">
                         <div class="kpi-grid">
-                            <div class="kpi-card"><span class="card-label">Portfolio Value</span><div class="kpi-value" id="kpi-total-value">$0.00</div></div>
-                            <div class="kpi-card"><span class="card-label">Overall Gain/Loss</span><div class="kpi-value" id="kpi-gain-loss">$0.00</div><div class="kpi-sub" id="kpi-gain-loss-percent">(0.00%)</div></div>
-                            <div class="kpi-card"><span class="card-label">Best Performer</span><div class="kpi-value" id="kpi-best-performer">N/A</div><div class="kpi-sub green" id="kpi-best-performer-change">+$0.00</div></div>
-                            <div class="kpi-card"><span class="card-label">Worst Performer</span><div class="kpi-value" id="kpi-worst-performer">N/A</div><div class="kpi-sub red" id="kpi-worst-performer-change">-$0.00</div></div>
+                            <div class="kpi-card"><span class="card-label">Portfolio Value</span>
+                                <div class="kpi-value" id="kpi-total-value">$0.00</div>
+                            </div>
+                            <div class="kpi-card"><span class="card-label">Overall Gain/Loss</span>
+                                <div class="kpi-value" id="kpi-gain-loss">$0.00</div>
+                                <div class="kpi-sub" id="kpi-gain-loss-percent">(0.00%)</div>
+                            </div>
+                            <div class="kpi-card"><span class="card-label">Best Performer</span>
+                                <div class="kpi-value" id="kpi-best-performer">N/A</div>
+                                <div class="kpi-sub green" id="kpi-best-performer-change">+$0.00</div>
+                            </div>
+                            <div class="kpi-card"><span class="card-label">Worst Performer</span>
+                                <div class="kpi-value" id="kpi-worst-performer">N/A</div>
+                                <div class="kpi-sub red" id="kpi-worst-performer-change">-$0.00</div>
+                            </div>
                         </div>
 
                         <div class="card chart-card">
@@ -308,7 +319,15 @@
                                 <span class="card-label">Asset Performance</span>
                                 <div class="asset-performance-table-wrapper">
                                     <table class="asset-performance-table">
-                                        <thead><tr><th>Asset</th><th>Category</th><th>Value</th><th>Change ($)</th><th>Change (%)</th></tr></thead>
+                                        <thead>
+                                            <tr>
+                                                <th>Asset</th>
+                                                <th>Category</th>
+                                                <th>Value</th>
+                                                <th>Change ($)</th>
+                                                <th>Change (%)</th>
+                                            </tr>
+                                        </thead>
                                         <tbody id="asset-performance-tbody"></tbody>
                                     </table>
                                 </div>
@@ -375,7 +394,7 @@
                                 <h4 class="plan-name">6 Months</h4>
                                 <div class="plan-price">
                                     <div class="tg-star-icon"></div>
-                                    750 <span class="price-period">/ 6 months</span>
+                                    700 <span class="price-period">/ 6 months</span>
                                 </div>
                                 <ul class="plan-features">
                                     <li style="color: var(--profit-green); font-weight: 700;">✓ 7-Day Free Trial</li>
@@ -391,7 +410,7 @@
                                 <h4 class="plan-name">1 Year</h4>
                                 <div class="plan-price">
                                     <div class="tg-star-icon"></div>
-                                    1200 <span class="price-period">/ year</span>
+                                    1000 <span class="price-period">/ year</span>
                                 </div>
                                 <ul class="plan-features">
                                     <li style="color: var(--profit-green); font-weight: 700;">✓ 7-Day Free Trial</li>
@@ -435,16 +454,18 @@
                         </div>
                         <div class="card full-width">
                             <h3 class="card-title">Preferences</h3>
-                            
+
                             <!-- НОВЫЙ БЛОК: Переключатель темы -->
                             <div class="setting-row">
-                                <div class="setting-text"><span>Light Theme</span><p>Switch to light mode interface.</p></div>
+                                <div class="setting-text"><span>Light Theme</span>
+                                    <p>Switch to light mode interface.</p>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="theme-toggle">
                                     <span class="toggle-knob"></span>
                                 </label>
                             </div>
-                            
+
                             <!-- Выбор валюты (добавлен Рубль) -->
                             <div class="setting-row">
                                 <div class="setting-text"><span class="i18n-currency">Default Currency</span></div>
@@ -455,7 +476,7 @@
                                     <option value="RUB">RUB (₽)</option>
                                 </select>
                             </div>
-                            
+
                             <!-- Выбор языка -->
                             <div class="setting-row">
                                 <div class="setting-text"><span class="i18n-language">Language</span></div>
@@ -464,9 +485,11 @@
                                     <option value="ru">Русский</option>
                                 </select>
                             </div>
-                            
+
                             <div class="setting-row">
-                                <div class="setting-text"><span>Weekly Summary</span><p>Receive a summary of your portfolio performance.</p></div>
+                                <div class="setting-text"><span>Weekly Summary</span>
+                                    <p>Receive a summary of your portfolio performance.</p>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" class="notification-toggle" data-key="notif-summary" checked>
                                     <span class="toggle-knob"></span>
@@ -476,16 +499,19 @@
                         <div class="card full-width danger-zone">
                             <h3 class="card-title">Danger Zone</h3>
                             <div class="setting-row">
-                                <div class="setting-text"><span>Clear All Data</span><p>Permanently delete all data. This action cannot be undone.</p></div>
+                                <div class="setting-text"><span>Clear All Data</span>
+                                    <p>Permanently delete all data. This action cannot be undone.</p>
+                                </div>
                                 <button class="danger-btn" id="clear-data-btn">Clear All Data</button>
                             </div>
                         </div>
                     </div>
                 </main>
             </div>
-            
+
         </main>
     </div>
     <script src="app.js"></script>
 </body>
+
 </html>
