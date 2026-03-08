@@ -1610,23 +1610,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // === 1. ЛОГИКА ПРОМОКОДОВ ===
     function applyPromoCode(event) {
         if (event) event.preventDefault();
         if(!promoCodeInput) return;
         const code = promoCodeInput.value.trim().toUpperCase();
-        if (!code && !event) return; 
-        if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите промокод' : 'Error', 'error') : alert('Error');
+        if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите промокод' : 'Error', 'error') : alert('Введите код!');
         
-        // Отправляем промокод в Python-бота через sendData
         if (window.Telegram && window.Telegram.WebApp) {
-            if (window.Telegram.WebApp.sendData) {
+            try {
+                // Пытаемся отправить код в бота
                 const payload = JSON.stringify({ action: 'promo_code', code: code });
                 window.Telegram.WebApp.sendData(payload);
-            } else {
-                if(window.showToast) showToast(settings.lang === 'ru' ? 'Используйте кнопку в меню бота' : 'Open via Bot Menu', 'error');
+                
+            } catch (err) {
+                // Если Telegram заблокировал отправку, выдаем жесткий алерт
+                alert("❌ ОШИБКА: Telegram блокирует отправку.\n\nЗакройте это окно и запустите приложение через большую кнопку '📱 Open FiMax' на клавиатуре в чате с ботом!");
             }
         } else {
-            if(window.showToast) showToast(settings.lang === 'ru' ? 'Доступно только в Telegram' : 'Only available in Telegram', 'error');
+            alert("Это работает только внутри Telegram!");
         }
         promoCodeInput.value = '';
     }
@@ -1665,33 +1667,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === ЛОГИКА ОПЛАТЫ TELEGRAM STARS ===
+    // === 2. ЛОГИКА ОПЛАТЫ TELEGRAM STARS ===
     document.querySelectorAll('.subscribe-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const plan = e.target.dataset.plan;
             const stars = e.target.dataset.stars;
             const isRu = window.appState && window.appState.lang === 'ru';
             
-            // Если открыто внутри Телеграма
             if (window.Telegram && window.Telegram.WebApp) {
-                // Вызываем красивое нативное системное окно Телеграма
                 window.Telegram.WebApp.showConfirm(
-                    isRu ? `Активировать 7 дней бесплатно, а затем оплатить ⭐️${stars}?` : `Start 7-day free trial, then pay ⭐️${stars}?`,
+                    isRu ? `Перейти к оплате ⭐️${stars}?` : `Proceed to pay ⭐️${stars}?`,
                     (confirmed) => {
                         if (confirmed) {
-                            if (window.Telegram.WebApp.sendData) {
-                                // Приложение закроется и отправит боту скрытую команду на создание чека
+                            try {
+                                // Пытаемся отправить команду на оплату в бота
                                 const payload = JSON.stringify({ action: 'pay_stars', plan: plan, stars: stars });
                                 window.Telegram.WebApp.sendData(payload);
-                            } else {
-                                if(window.showToast) window.showToast(isRu ? 'Оплата доступна при запуске из меню бота' : 'Open via Bot Menu to pay', 'error');
+                                
+                            } catch (err) {
+                                // Если Telegram заблокировал отправку
+                                alert("❌ ОШИБКА ОПЛАТЫ:\n\nОплата недоступна из этого меню. Закройте окно, напишите боту /start и нажмите на кнопку '📱 Open FiMax' внизу экрана (вместо клавиатуры).");
                             }
                         }
                     }
                 );
             } else {
-                // Если открыли просто в браузере (Google Chrome, Safari)
-                if(window.showToast) window.showToast(isRu ? `Оплата ⭐️${stars} доступна только в приложении Telegram` : `Payment of ⭐️${stars} is only available in Telegram app`, 'error');
+                alert("Оплата доступна только в приложении Telegram.");
             }
         });
     });

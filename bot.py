@@ -161,58 +161,51 @@ async def cmd_start(message: types.Message):
         reply_markup=keyboard
     )
 
-# --- ПРИЕМ ДАННЫХ ИЗ WEB APP (Оплата Звездами и Промокоды) ---
+# --- ПРИЕМ ДАННЫХ ИЗ WEB APP (Оплата и Промокоды) ---
 @dp.message(F.web_app_data)
 async def handle_webapp_data(message: types.Message):
+    # Получаем данные, которые прислал app.js
     data = json.loads(message.web_app_data.data)
     user_id = message.from_user.id
-    username = message.from_user.username
-
-    # Защита: Убеждаемся, что пользователь есть в БД, даже если он пропустил /start
-    user = get_user(user_id)
-    if not user:
-        add_user(user_id, username)
-        user = get_user(user_id)
     
-    # 1. ОБРАБОТКА ОПЛАТЫ ЗВЕЗДАМИ
+    # 1. ЕСЛИ ПРИШЛА КОМАНДА ОПЛАТЫ ЗВЕЗДАМИ
     if data.get("action") == "pay_stars":
         plan_id = data.get("plan")
         if plan_id not in PLANS:
-            return await message.answer("❌ Invalid plan selected.")
+            return await message.answer("❌ Ошибка: неверный тариф.")
             
         plan_info = PLANS[plan_id]
         
-        # Проверяем Trial (индекс 4 это trial_used)
-        if user and user[4] == 0: 
+        # Выдаем триал, если он еще не использовался
+        user = get_user(user_id)
+        if user and user[4] == 0: # trial_used == 0
             update_subscription(user_id, 7)
             set_trial_used(user_id)
-            await message.answer("🎉 You activated your 7-Day Free Trial! Now you can pay to extend it.")
+            await message.answer("🎉 Вы активировали 7 дней бесплатно! Теперь вы можете оплатить подписку для продления.")
             
+        # Формируем счет на Telegram Stars
         prices = [LabeledPrice(label=plan_info["name"], amount=plan_info["stars"])]
         
         await bot.send_invoice(
             chat_id=message.chat.id,
             title="FiMax Premium",
-            description=f"Subscribe to {plan_info['name']} and unlock all features!",
+            description=f"Подписка: {plan_info['name']}",
             payload=plan_id,
-            provider_token="", # Оставляем пустым для Stars
-            currency="XTR",
+            provider_token="", # Для Stars токен должен быть пустым!
+            currency="XTR",    # XTR - это валюта Telegram Stars
             prices=prices
         )
-        
-    # 2. ОБРАБОТКА ВВОДА ПРОМОКОДА ИЗ WEB APP
+
+    # 2. ЕСЛИ ПРИШЕЛ ПРОМОКОД ИЗ НАСТРОЕК
     elif data.get("action") == "promo_code":
         code = data.get("code")
         days = use_promocode(code)
         
         if days:
             new_end = update_subscription(user_id, days)
-            if new_end:
-                await message.answer(f"✅ Promo code applied! {days} days added.\nValid until: <b>{new_end.strftime('%Y-%m-%d')}</b>", parse_mode="HTML")
-            else:
-                await message.answer("❌ Error updating subscription.")
+            await message.answer(f"✅ Промокод успешно применен!\nДобавлено: {days} дней.\nАктивно до: <b>{new_end.strftime('%Y-%m-%d')}</b>", parse_mode="HTML")
         else:
-            await message.answer("❌ Invalid or expired promo code.")
+            await message.answer("❌ Неверный или уже использованный промокод.")
 
 @dp.pre_checkout_query()
 async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
