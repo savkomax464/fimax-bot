@@ -1617,10 +1617,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!code && !event) return; 
         if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите промокод' : 'Error', 'error') : alert('Error');
         
-        if (['PRO100', 'SAVE20', 'SPECIAL'].includes(code)) {
-            if(window.showToast) showToast(settings.lang === 'ru' ? 'Промокод применен!' : 'Promo code applied!', 'success');
+        // Отправляем промокод в Python-бота через sendData
+        if (window.Telegram && window.Telegram.WebApp) {
+            if (window.Telegram.WebApp.sendData) {
+                const payload = JSON.stringify({ action: 'promo_code', code: code });
+                window.Telegram.WebApp.sendData(payload);
+            } else {
+                if(window.showToast) showToast(settings.lang === 'ru' ? 'Используйте кнопку в меню бота' : 'Open via Bot Menu', 'error');
+            }
         } else {
-            if(window.showToast) showToast(settings.lang === 'ru' ? 'Неверный код.' : 'Invalid promo code.', 'error');
+            if(window.showToast) showToast(settings.lang === 'ru' ? 'Доступно только в Telegram' : 'Only available in Telegram', 'error');
         }
         promoCodeInput.value = '';
     }

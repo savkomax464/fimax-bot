@@ -161,12 +161,20 @@ async def cmd_start(message: types.Message):
         reply_markup=keyboard
     )
 
-# --- ПРИЕМ ДАННЫХ ИЗ WEB APP (Оплата Звездами) ---
+# --- ПРИЕМ ДАННЫХ ИЗ WEB APP (Оплата Звездами и Промокоды) ---
 @dp.message(F.web_app_data)
 async def handle_webapp_data(message: types.Message):
     data = json.loads(message.web_app_data.data)
     user_id = message.from_user.id
+    username = message.from_user.username
+
+    # Защита: Убеждаемся, что пользователь есть в БД, даже если он пропустил /start
+    user = get_user(user_id)
+    if not user:
+        add_user(user_id, username)
+        user = get_user(user_id)
     
+    # 1. ОБРАБОТКА ОПЛАТЫ ЗВЕЗДАМИ
     if data.get("action") == "pay_stars":
         plan_id = data.get("plan")
         if plan_id not in PLANS:
@@ -174,9 +182,8 @@ async def handle_webapp_data(message: types.Message):
             
         plan_info = PLANS[plan_id]
         
-        # Проверяем Trial
-        user = get_user(user_id)
-        if user and user[4] == 0: # trial_used == 0
+        # Проверяем Trial (индекс 4 это trial_used)
+        if user and user[4] == 0: 
             update_subscription(user_id, 7)
             set_trial_used(user_id)
             await message.answer("🎉 You activated your 7-Day Free Trial! Now you can pay to extend it.")
@@ -192,6 +199,20 @@ async def handle_webapp_data(message: types.Message):
             currency="XTR",
             prices=prices
         )
+        
+    # 2. ОБРАБОТКА ВВОДА ПРОМОКОДА ИЗ WEB APP
+    elif data.get("action") == "promo_code":
+        code = data.get("code")
+        days = use_promocode(code)
+        
+        if days:
+            new_end = update_subscription(user_id, days)
+            if new_end:
+                await message.answer(f"✅ Promo code applied! {days} days added.\nValid until: <b>{new_end.strftime('%Y-%m-%d')}</b>", parse_mode="HTML")
+            else:
+                await message.answer("❌ Error updating subscription.")
+        else:
+            await message.answer("❌ Invalid or expired promo code.")
 
 @dp.pre_checkout_query()
 async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
@@ -202,16 +223,21 @@ async def process_successful_payment(message: types.Message):
     plan_id = message.successful_payment.invoice_payload
     user_id = message.from_user.id
     
+    # Гарантируем наличие в БД
+    if not get_user(user_id):
+        add_user(user_id, message.from_user.username)
+    
     if plan_id in PLANS:
         days = PLANS[plan_id]["days"]
         new_end_date = update_subscription(user_id, days)
-        date_str = new_end_date.strftime("%Y-%m-%d %H:%M")
-        
-        await message.answer(
-            f"✅ Payment successful! Thank you for buying {PLANS[plan_id]['name']}!\n\n"
-            f"Your Premium is active until: <b>{date_str}</b>",
-            parse_mode="HTML"
-        )
+        if new_end_date:
+            date_str = new_end_date.strftime("%Y-%m-%d %H:%M")
+            
+            await message.answer(
+                f"✅ Payment successful! Thank you for buying {PLANS[plan_id]['name']}!\n\n"
+                f"Your Premium is active until: <b>{date_str}</b>",
+                parse_mode="HTML"
+            )
 
 # --- ПРОМОКОДЫ (Для админа и пользователей) ---
 @dp.message(Command("promo"))
