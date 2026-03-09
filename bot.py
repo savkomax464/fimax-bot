@@ -156,24 +156,11 @@ async def cmd_start(message: types.Message):
     
     args = message.text.split()
     
-    # === 1. ОБРАБОТКА ДИПЛИНКОВ (ПРОМО И ОПЛАТА) ИЗ СВЕРНУТОГО ПРИЛОЖЕНИЯ ===
+    # === 1. ОБРАБОТКА ДИПЛИНКОВ (ОПЛАТА) ИЗ СВЕРНУТОГО ПРИЛОЖЕНИЯ ===
     if len(args) > 1:
         payload = args[1]
         
-        if payload.startswith("promo_"):
-            code = payload.replace("promo_", "")
-            days = use_promocode(code)
-            if days:
-                new_end = update_subscription(user_id, days)
-                # Даем кнопку с ОБНОВЛЕННЫМ статусом для возврата в приложение
-                kb = types.InlineKeyboardMarkup(inline_keyboard=[[
-                    types.InlineKeyboardButton(text="📱 Вернуться в FiMax", web_app=WebAppInfo(url=f"{WEBAPP_URL}?sub_end={new_end.isoformat()}"))
-                ]])
-                return await message.answer(f"✅ Промокод применен!\nДобавлено: {days} дней.\nАктивно до: <b>{new_end.strftime('%Y-%m-%d')}</b>", parse_mode="HTML", reply_markup=kb)
-            else:
-                return await message.answer("❌ Неверный или уже использованный промокод.")
-                
-        elif payload.startswith("pay_"):
+        if payload.startswith("pay_"):
             plan_id = payload.replace("pay_", "")
             if plan_id in PLANS:
                 plan = PLANS[plan_id]
@@ -188,7 +175,7 @@ async def cmd_start(message: types.Message):
     # Берем дату окончания подписки (если есть)
     sub_end = user[2] if user and user[2] else "none"
     
-    # Приклеиваем статус подписки к ссылке WebApp!
+    # Приклеиваем статус подписки к ссылке WebApp
     sync_url = f"{WEBAPP_URL}?sub_end={sub_end}"
     
     keyboard = types.ReplyKeyboardMarkup(
@@ -200,6 +187,25 @@ async def cmd_start(message: types.Message):
         "Welcome to FiMax! 📊\n\nTrack your portfolio and get AI insights. Click the button below to open.",
         reply_markup=keyboard
     )
+
+# === 3. СКРЫТЫЙ ПРИЕМ ПРОМОКОДОВ ИЗ ПРИЛОЖЕНИЯ (БЕЗ ЗАКРЫТИЯ) ===
+@dp.message(F.web_app_data)
+async def handle_webapp_data(message: types.Message):
+    try:
+        data = json.loads(message.web_app_data.data)
+        user_id = message.from_user.id
+        
+        if data.get("action") == "promo_code":
+            code = data.get("code")
+            days = use_promocode(code)
+            
+            if days:
+                new_end = update_subscription(user_id, days)
+                # Бот молча применяет код. Приложение само покажет успех.
+            else:
+                pass # Бот ничего не пишет при ошибке
+    except Exception as e:
+        print(f"Error handling webapp data: {e}")
 
 @dp.pre_checkout_query()
 async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):

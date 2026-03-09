@@ -1621,22 +1621,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // === ВСТАВЬТЕ СЮДА ИМЯ ВАШЕГО БОТА (без @) ===
     const BOT_USERNAME = "fimaxbot";
 
-    // === 1. ЛОГИКА ПРОМОКОДОВ ===
+    // === 1. ТИХАЯ ЛОГИКА ПРОМОКОДОВ (БЕЗ СВОРАЧИВАНИЯ) ===
     function applyPromoCode(event) {
         if (event) event.preventDefault();
         if(!promoCodeInput) return;
         const code = promoCodeInput.value.trim().toUpperCase();
         if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите код' : 'Enter code', 'error') : null;
         
-        // 1. Показываем красивое уведомление ВНУТРИ приложения
-        if (window.showToast) showToast(settings.lang === 'ru' ? 'Обработка промокода...' : 'Processing code...', 'info');
+        const isRu = settings.lang === 'ru';
         
-        // 2. Ждем секунду и плавно СВОРАЧИВАЕМ приложение (оно не закрывается!)
-        setTimeout(() => {
-            if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=promo_${code}`);
+        // 1. Показываем уведомление об обработке ВНУТРИ приложения
+        if (window.showToast) showToast(isRu ? 'Проверяем код...' : 'Checking code...', 'info');
+        
+        // 2. Отправляем данные в бота "тихо" через sendData, если открыто из нижнего меню
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.sendData) {
+            try {
+                // Если сработает sendData, бот поймает его через F.web_app_data
+                window.Telegram.WebApp.sendData(JSON.stringify({ action: 'promo_code', code: code }));
+                
+                // Так как мы не можем получить прямой ответ от бота без закрытия WebApp,
+                // мы просто показываем красивое уведомление (Имитируем успех для UI, 
+                // реальное обновление подтянется при следующем входе)
+                setTimeout(() => {
+                    if (window.showToast) showToast(isRu ? 'Запрос отправлен. Обновите приложение.' : 'Request sent. Restart app to apply.', 'success');
+                }, 1000);
+                
+            } catch (err) {
+                // Если sendData заблокирован (например, открыли через скрепку)
+                if (window.showToast) showToast(isRu ? 'Ошибка: Откройте приложение через кнопку меню' : 'Error: Open via keyboard button', 'error');
             }
-        }, 1200);
+        } else {
+            if (window.showToast) showToast('Telegram API error', 'error');
+        }
         
         promoCodeInput.value = '';
     }
