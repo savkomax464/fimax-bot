@@ -28,8 +28,16 @@ ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://github.com")
 # --- NEW VARIABLE FOR DATABASE CONNECTION ---
 DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+
+# Reliably convert Render URL for async driver
+if DATABASE_URL:
+    if DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set!")
 
 # Prices in Telegram Stars
 PLANS = {
@@ -293,10 +301,6 @@ async def send_weekly_reports():
 # === STARTUP ===
 # ==========================================
 async def main():
-    # Validate DATABASE_URL before creating engine
-    if not DATABASE_URL:
-        raise ValueError("DATABASE_URL environment variable is not set or invalid!")
-
     print("Initializing Database...")
     await init_db()
 
