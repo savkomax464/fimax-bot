@@ -36,7 +36,7 @@ if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is not set!")
 
 PLANS = {
-    "1_month": {"stars": 0, "days": 30, "name": "1 Month Premium"},
+    "1_month": {"stars": 150, "days": 30, "name": "1 Month Premium"},
     "6_months": {"stars": 700, "days": 180, "name": "6 Months Premium"},
     "1_year": {"stars": 1000, "days": 365, "name": "1 Year Premium"}
 }
