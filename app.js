@@ -1619,21 +1619,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === ВСТАВЬТЕ СЮДА ИМЯ ВАШЕГО БОТА (без @) ===
-    const BOT_USERNAME = "fimaxbot";
+    const BOT_USERNAME = "fimax_tracker_bot";
 
+    // === 1. ЛОГИКА ПРОМОКОДОВ ===
     function applyPromoCode(event) {
         if (event) event.preventDefault();
         if(!promoCodeInput) return;
         const code = promoCodeInput.value.trim().toUpperCase();
-        if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите код' : 'Enter code', 'error') : alert('Error');
+        if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите код' : 'Enter code', 'error') : null;
         
-        if (window.showToast) showToast(settings.lang === 'ru' ? 'Обработка...' : 'Processing...', 'info');
+        // 1. Показываем красивое уведомление ВНУТРИ приложения
+        if (window.showToast) showToast(settings.lang === 'ru' ? 'Обработка промокода...' : 'Processing code...', 'info');
+        
+        // 2. Ждем секунду и плавно СВОРАЧИВАЕМ приложение (оно не закрывается!)
         setTimeout(() => {
             if (window.Telegram && window.Telegram.WebApp) {
-                // ЗАМЕНИТЕ YOUR_BOT_USERNAME НА ИМЯ ВАШЕГО БОТА БЕЗ @
                 window.Telegram.WebApp.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=promo_${code}`);
             }
         }, 1200);
+        
         promoCodeInput.value = '';
     }
 
@@ -1652,6 +1656,8 @@ document.addEventListener('DOMContentLoaded', () => {
             toggle.addEventListener('change', async () => {
                 settings[toggle.dataset.key] = toggle.checked;
                 await saveSettings();
+
+                // Если ты включил тумблер — сразу показываем отчет для проверки!
                 if (toggle.dataset.key === 'notif-summary' && toggle.checked) {
                     if (window.showWeeklySummary) await window.showWeeklySummary(true);
                 }
@@ -1669,21 +1675,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === ЛОГИКА ОПЛАТЫ TELEGRAM STARS ===
+    // === 2. ЛОГИКА ОПЛАТЫ TELEGRAM STARS ===
     document.querySelectorAll('.subscribe-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const plan = e.target.dataset.plan;
             const stars = e.target.dataset.stars;
             const isRu = window.appState && window.appState.lang === 'ru';
-            
+
             if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.showConfirm(
                     isRu ? `Перейти к оплате ⭐️${stars}?` : `Proceed to pay ⭐️${stars}?`,
                     (confirmed) => {
                         if (confirmed) {
+                            // 1. Показываем тост внутри приложения
                             if(window.showToast) showToast(isRu ? 'Создаем счет...' : 'Generating invoice...', 'info');
+
+                            // 2. Сворачиваем приложение к боту для оплаты
                             setTimeout(() => {
-                                // ЗАМЕНИТЕ YOUR_BOT_USERNAME НА ИМЯ ВАШЕГО БОТА БЕЗ @
                                 window.Telegram.WebApp.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=pay_${plan}`);
                             }, 1000);
                         }
@@ -1693,36 +1701,46 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // === СИНХРОНИЗАЦИЯ СТАТУСА ПОДПИСКИ ===
+    // === СИНХРОНИЗАЦИЯ СТАТУСА ПОДПИСКИ (ОБНОВЛЕНИЕ БЕЙДЖА "PREMIUM") ===
     async function syncSubscriptionUI() {
         const urlParams = new URLSearchParams(window.location.search);
         let subEndFromUrl = urlParams.get('sub_end');
-        
+
+        // Если зашли по ссылке с обновленными данными из бота - сохраняем их
         if (subEndFromUrl && subEndFromUrl !== "none") {
             await AppStorage.set('premium_end', subEndFromUrl);
         } else if (subEndFromUrl === "none") {
             await AppStorage.set('premium_end', '');
         }
 
+        // Берем актуальный сохраненный статус
         const savedSubEnd = await AppStorage.get('premium_end');
         const statusBadge = document.querySelector('.status-badge');
-        
+
         if (statusBadge) {
-            if (savedSubEnd && new Date(savedSubEnd) > new Date()) { 
-                const d = new Date(savedSubEnd);
-                statusBadge.textContent = `Premium (до ${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()})`;
-                statusBadge.className = 'status-badge'; 
-                statusBadge.style.background = 'rgba(48, 209, 88, 0.15)';
-                statusBadge.style.color = 'var(--profit-green)';
-                statusBadge.style.border = '1px solid rgba(48, 209, 88, 0.3)';
-            } else { 
-                statusBadge.textContent = savedSubEnd ? 'Free Plan (Expired)' : 'Free Plan';
+            if (savedSubEnd) {
+                const dateObj = new Date(savedSubEnd);
+                if (dateObj > new Date()) { // Подписка активна
+                    const dateStr = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
+                    statusBadge.textContent = `Premium (до ${dateStr})`;
+                    statusBadge.className = 'status-badge';
+                    // Делаем бейдж зеленым и красивым
+                    statusBadge.style.background = 'rgba(48, 209, 88, 0.15)';
+                    statusBadge.style.color = 'var(--profit-green)';
+                    statusBadge.style.border = '1px solid rgba(48, 209, 88, 0.3)';
+                } else { // Истекла
+                    statusBadge.textContent = 'Free Plan (Expired)';
+                    statusBadge.className = 'status-badge free';
+                }
+            } else { // Никогда не было
+                statusBadge.textContent = 'Free Plan';
                 statusBadge.className = 'status-badge free';
-                statusBadge.style = ''; 
             }
         }
     }
-    
+
+    // Запускаем синхронизацию интерфейса при загрузке настроек
     syncSubscriptionUI();
+
     loadSettings();
 });
