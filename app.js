@@ -1706,39 +1706,53 @@ document.addEventListener('DOMContentLoaded', () => {
     // === СИНХРОНИЗАЦИЯ СТАТУСА ПОДПИСКИ (ОБНОВЛЕНИЕ БЕЙДЖА "PREMIUM") ===
     async function syncSubscriptionUI() {
         const urlParams = new URLSearchParams(window.location.search);
-        let subEndFromUrl = urlParams.get('sub_end');
+        let subEndStr = urlParams.get('sub_end');
 
-        // Если зашли по ссылке с обновленными данными из бота - сохраняем их
-        if (subEndFromUrl && subEndFromUrl !== "none") {
-            await AppStorage.set('premium_end', subEndFromUrl);
-        } else if (subEndFromUrl === "none") {
-            await AppStorage.set('premium_end', '');
+        // 1. Моментально берем дату из URL, если она есть (чтобы UI обновился мгновенно)
+        // и параллельно сохраняем в облако
+        if (subEndStr !== null) {
+            if (subEndStr === "none") {
+                AppStorage.set('premium_end', '');
+                subEndStr = '';
+            } else {
+                AppStorage.set('premium_end', subEndStr);
+            }
+        } else {
+            // Если открыли приложение как-то иначе, подгружаем из памяти
+            subEndStr = await AppStorage.get('premium_end');
         }
 
-        // Берем актуальный сохраненный статус
-        const savedSubEnd = await AppStorage.get('premium_end');
         const statusBadge = document.querySelector('.status-badge');
+        const isRu = window.appState && window.appState.lang === 'ru';
 
         if (statusBadge) {
-            if (savedSubEnd) {
-                const dateObj = new Date(savedSubEnd);
-                if (dateObj > new Date()) { // Подписка активна
-                    const dateStr = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
-                    statusBadge.textContent = `Premium (до ${dateStr})`;
+            if (subEndStr) {
+                const dateObj = new Date(subEndStr);
+                const now = new Date();
+                
+                // 2. Расчет оставшихся дней (разница между датой конца и текущей датой)
+                const diffTime = dateObj.getTime() - now.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays > 0) { 
+                    // ПОДПИСКА АКТИВНА
+                    statusBadge.textContent = isRu ? `Premium (Осталось: ${diffDays} дн.)` : `Premium (${diffDays} days left)`;
                     statusBadge.className = 'status-badge';
-                    // Делаем бейдж зеленым и красивым
+                    // Включаем зеленый "премиум" дизайн
                     statusBadge.style.background = 'rgba(48, 209, 88, 0.15)';
                     statusBadge.style.color = 'var(--profit-green)';
                     statusBadge.style.border = '1px solid rgba(48, 209, 88, 0.3)';
-                } else { // Истекла
-                    statusBadge.textContent = 'Free Plan (Expired)';
+                } else { 
+                    // ПОДПИСКА ИСТЕКЛА
+                    statusBadge.textContent = isRu ? 'Бесплатный (Истёк)' : 'Free Plan (Expired)';
                     statusBadge.className = 'status-badge free';
-                    statusBadge.style = ''; // Сбрасываем зеленые стили
+                    statusBadge.style = ''; // Сбрасываем стили
                 }
-            } else { // Никогда не было
-                statusBadge.textContent = 'Free Plan';
+            } else { 
+                // ПОДПИСКИ НИКОГДА НЕ БЫЛО
+                statusBadge.textContent = isRu ? 'Бесплатный тариф' : 'Free Plan';
                 statusBadge.className = 'status-badge free';
-                statusBadge.style = ''; // Сбрасываем зеленые стили
+                statusBadge.style = ''; // Сбрасываем стили
             }
         }
     }
