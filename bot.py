@@ -9,6 +9,7 @@ from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.types import WebAppInfo, PreCheckoutQuery, LabeledPrice
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from aiohttp import web
 
 # --- NEW IMPORTS FOR POSTGRESQL ---
 from sqlalchemy import select, Integer, String, DateTime, Boolean
@@ -26,8 +27,8 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://github.com")
-# --- NEW VARIABLE FOR DATABASE CONNECTION ---
 DATABASE_URL = os.getenv("DATABASE_URL")
+PORT = int(os.getenv("PORT", 8080))
 
 # Reliably convert Render URL for async driver
 if DATABASE_URL:
@@ -298,8 +299,31 @@ async def send_weekly_reports():
 
 
 # ==========================================
+# === HTTP SERVER FOR RENDER HEALTH CHECK ===
+# ==========================================
+
+async def health_handler(request):
+    """Simple health check endpoint for Render"""
+    return web.json_response({"status": "ok", "bot": "running"})
+
+
+async def start_http_server():
+    """Start HTTP server on Render's PORT"""
+    app = web.Application()
+    app.router.add_get('/', health_handler)
+    app.router.add_get('/health', health_handler)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', PORT)
+    await site.start()
+    print(f"HTTP server started on port {PORT}")
+
+
+# ==========================================
 # === STARTUP ===
 # ==========================================
+
 async def main():
     print("Initializing Database...")
     await init_db()
@@ -308,6 +332,9 @@ async def main():
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
     scheduler.add_job(send_weekly_reports, trigger="cron", day_of_week="fri", hour=18, minute=0)
     scheduler.start()
+
+    print("Starting HTTP server for Render...")
+    await start_http_server()
 
     print("Bot is polling...")
     await dp.start_polling(bot)

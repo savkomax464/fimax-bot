@@ -9,5 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy bot files
 COPY bot.py .
 
+# Expose port for Render
+EXPOSE 8080
+
 # Run the bot
 CMD ["python", "bot.py"]
