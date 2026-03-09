@@ -1625,18 +1625,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event) event.preventDefault();
         if(!promoCodeInput) return;
         const code = promoCodeInput.value.trim().toUpperCase();
-        if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите код' : 'Enter code', 'error') : null;
+        if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите код' : 'Enter code', 'error') : alert('Error');
         
-        // Показываем ваш красивый toast внутри приложения
-        if (window.showToast) showToast(settings.lang === 'ru' ? 'Обработка промокода...' : 'Processing code...', 'info');
-        
-        // Ждем 1 секунду и плавно сворачиваем приложение
+        if (window.showToast) showToast(settings.lang === 'ru' ? 'Обработка...' : 'Processing...', 'info');
         setTimeout(() => {
             if (window.Telegram && window.Telegram.WebApp) {
+                // ЗАМЕНИТЕ YOUR_BOT_USERNAME НА ИМЯ ВАШЕГО БОТА БЕЗ @
                 window.Telegram.WebApp.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=promo_${code}`);
             }
         }, 1200);
-        
         promoCodeInput.value = '';
     }
 
@@ -1686,6 +1683,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (confirmed) {
                             if(window.showToast) showToast(isRu ? 'Создаем счет...' : 'Generating invoice...', 'info');
                             setTimeout(() => {
+                                // ЗАМЕНИТЕ YOUR_BOT_USERNAME НА ИМЯ ВАШЕГО БОТА БЕЗ @
                                 window.Telegram.WebApp.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=pay_${plan}`);
                             }, 1000);
                         }
@@ -1710,23 +1708,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const statusBadge = document.querySelector('.status-badge');
         
         if (statusBadge) {
-            if (savedSubEnd) {
-                const dateObj = new Date(savedSubEnd);
-                if (dateObj > new Date()) { 
-                    const dateStr = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
-                    statusBadge.textContent = `Premium (до ${dateStr})`;
-                    statusBadge.className = 'status-badge'; 
-                    // Зеленый красивый стиль для Premium
-                    statusBadge.style.background = 'rgba(48, 209, 88, 0.15)';
-                    statusBadge.style.color = 'var(--profit-green)';
-                    statusBadge.style.border = '1px solid rgba(48, 209, 88, 0.3)';
-                } else { 
-                    statusBadge.textContent = 'Free Plan (Expired)';
-                    statusBadge.className = 'status-badge free';
-                    statusBadge.style = ''; 
-                }
+            if (savedSubEnd && new Date(savedSubEnd) > new Date()) { 
+                const d = new Date(savedSubEnd);
+                statusBadge.textContent = `Premium (до ${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()})`;
+                statusBadge.className = 'status-badge'; 
+                statusBadge.style.background = 'rgba(48, 209, 88, 0.15)';
+                statusBadge.style.color = 'var(--profit-green)';
+                statusBadge.style.border = '1px solid rgba(48, 209, 88, 0.3)';
             } else { 
-                statusBadge.textContent = 'Free Plan';
+                statusBadge.textContent = savedSubEnd ? 'Free Plan (Expired)' : 'Free Plan';
                 statusBadge.className = 'status-badge free';
                 statusBadge.style = ''; 
             }
