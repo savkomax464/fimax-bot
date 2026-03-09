@@ -162,6 +162,8 @@ async def cmd_start(message: types.Message):
     args = message.text.split()
     if len(args) > 1:
         payload = args[1]
+        
+        # 1. Если это оплата
         if payload.startswith("pay_"):
             plan_id = payload.replace("pay_", "")
             if plan_id in PLANS:
@@ -172,21 +174,49 @@ async def cmd_start(message: types.Message):
                     description=f"Subscription: {plan['name']}",
                     payload=plan_id, provider_token="", currency="XTR", prices=prices
                 )
+                
+        # 2. Если это активация ПРОМОКОДА
+        if payload.startswith("promo_"):
+            code = payload.replace("promo_", "").upper()
+            days = await use_promocode(code)
+            if days:
+                new_end = await update_subscription(user_id, days, username)
+                sync_url = f"{WEBAPP_URL}?sub_end={new_end.isoformat()}&bot={bot_username}"
+                
+                kb = types.InlineKeyboardMarkup(inline_keyboard=[[
+                    types.InlineKeyboardButton(text="📱 Open FiMax (Premium)", web_app=WebAppInfo(url=sync_url))
+                ]])
+                
+                return await message.answer(
+                    f"✅ Promo code applied! {days} days added.\nValid until: <b>{new_end.strftime('%Y-%m-%d')}</b>",
+                    parse_mode="HTML", 
+                    reply_markup=kb
+                )
+            else:
+                return await message.answer("❌ Invalid or expired promo code.")
 
+    # Обычный старт
     sub_end_iso = "none"
     if user and user.subscription_end:
         sub_end_iso = user.subscription_end.isoformat()
 
-    # Передаем имя бота в WebApp
     sync_url = f"{WEBAPP_URL}?sub_end={sub_end_iso}&bot={bot_username}"
 
-    keyboard = types.ReplyKeyboardMarkup(
-        keyboard=[[types.KeyboardButton(text="📱 Open FiMax", web_app=WebAppInfo(url=sync_url))]],
-        resize_keyboard=True
-    )
+    # Создаем INLINE кнопку (под сообщением) вместо нижней клавиатуры
+    inline_kb = types.InlineKeyboardMarkup(inline_keyboard=[[
+        types.InlineKeyboardButton(text="📱 Open FiMax", web_app=WebAppInfo(url=sync_url))
+    ]])
+
+    # Скрытый трюк: Отправляем и сразу удаляем сообщение с командой убрать старую нижнюю кнопку
+    try:
+        rm_msg = await message.answer("🔄", reply_markup=types.ReplyKeyboardRemove())
+        await rm_msg.delete()
+    except Exception:
+        pass
+
     await message.answer(
         "Welcome to FiMax! 📊\n\nTrack your portfolio and get AI insights. Click the button below to open.",
-        reply_markup=keyboard
+        reply_markup=inline_kb
     )
 
 @dp.message(F.web_app_data)

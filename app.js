@@ -1622,39 +1622,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const dynamicBotUsername = urlParams.get('bot') || "fimaxbot";
 
-    // === 1. ТИХАЯ ЛОГИКА ПРОМОКОДОВ (БЕЗ СВОРАЧИВАНИЯ) ===
+    // === 1. ЛОГИКА ПРОМОКОДОВ (ЧЕРЕЗ DEEP LINK) ===
     function applyPromoCode(event) {
         if (event) event.preventDefault();
         if(!promoCodeInput) return;
         const code = promoCodeInput.value.trim().toUpperCase();
         if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите код' : 'Enter code', 'error') : null;
-        
+
         const isRu = settings.lang === 'ru';
-        
-        // 1. Показываем уведомление об обработке ВНУТРИ приложения
-        if (window.showToast) showToast(isRu ? 'Проверяем код...' : 'Checking code...', 'info');
-        
-        // 2. Отправляем данные в бота "тихо" через sendData, если открыто из нижнего меню
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.sendData) {
-            try {
-                // Если сработает sendData, бот поймает его через F.web_app_data
-                window.Telegram.WebApp.sendData(JSON.stringify({ action: 'promo_code', code: code }));
-                
-                // Так как мы не можем получить прямой ответ от бота без закрытия WebApp,
-                // мы просто показываем красивое уведомление (Имитируем успех для UI, 
-                // реальное обновление подтянется при следующем входе)
-                setTimeout(() => {
-                    if (window.showToast) showToast(isRu ? 'Запрос отправлен. Обновите приложение.' : 'Request sent. Restart app to apply.', 'success');
-                }, 1000);
-                
-            } catch (err) {
-                // Если sendData заблокирован (например, открыли через скрепку)
-                if (window.showToast) showToast(isRu ? 'Ошибка: Откройте приложение через кнопку меню' : 'Error: Open via keyboard button', 'error');
-            }
-        } else {
-            if (window.showToast) showToast('Telegram API error', 'error');
+
+        if (window.showToast) showToast(isRu ? 'Применяем код...' : 'Applying code...', 'info');
+
+        if (window.Telegram && window.Telegram.WebApp) {
+            // Перенаправляем в бота с командой старта и промокодом
+            setTimeout(() => {
+                window.Telegram.WebApp.openTelegramLink(`https://t.me/${dynamicBotUsername}?start=promo_${code}`);
+            }, 500);
         }
-        
+
         promoCodeInput.value = '';
     }
 
@@ -1748,10 +1733,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else { // Истекла
                     statusBadge.textContent = 'Free Plan (Expired)';
                     statusBadge.className = 'status-badge free';
+                    statusBadge.style = ''; // Сбрасываем зеленые стили
                 }
             } else { // Никогда не было
                 statusBadge.textContent = 'Free Plan';
                 statusBadge.className = 'status-badge free';
+                statusBadge.style = ''; // Сбрасываем зеленые стили
             }
         }
     }
