@@ -1677,10 +1677,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === ДИНАМИЧЕСКОЕ ПОЛУЧЕНИЕ ИМЕНИ БОТА ===
-    const urlParams = new URLSearchParams(window.location.search);
-    const dynamicBotUsername = urlParams.get('bot') || "fimaxbot";
-
     // === ЛОГИКА ОПЛАТЫ TELEGRAM STARS (МОМЕНТАЛЬНЫЙ ПЕРЕХОД) ===
     document.querySelectorAll('.subscribe-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1689,7 +1685,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.Telegram && window.Telegram.WebApp) {
                 // 1. Моментально перенаправляем в чат к боту с нужной командой
                 window.Telegram.WebApp.openTelegramLink(`https://t.me/${dynamicBotUsername}?start=pay_${plan}`);
-                
+
                 // 2. Принудительно закрываем (сворачиваем) WebApp
                 window.Telegram.WebApp.close();
             }
