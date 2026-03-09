@@ -1610,26 +1610,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // === ВСТАВЬТЕ СЮДА ИМЯ ВАШЕГО БОТА (без @) ===
+    const BOT_USERNAME = "fimax_tracker_bot";
+
     // === 1. ЛОГИКА ПРОМОКОДОВ ===
     function applyPromoCode(event) {
         if (event) event.preventDefault();
         if(!promoCodeInput) return;
         const code = promoCodeInput.value.trim().toUpperCase();
-        if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите промокод' : 'Error', 'error') : alert('Введите код!');
+        if (!code) return window.showToast ? showToast(settings.lang === 'ru' ? 'Введите код' : 'Enter code', 'error') : null;
         
-        if (window.Telegram && window.Telegram.WebApp) {
-            try {
-                // Пытаемся отправить код в бота
-                const payload = JSON.stringify({ action: 'promo_code', code: code });
-                window.Telegram.WebApp.sendData(payload);
-                
-            } catch (err) {
-                // Если Telegram заблокировал отправку, выдаем жесткий алерт
-                alert("❌ ОШИБКА: Telegram блокирует отправку.\n\nЗакройте это окно и запустите приложение через большую кнопку '📱 Open FiMax' на клавиатуре в чате с ботом!");
+        // 1. Показываем красивое уведомление ВНУТРИ приложения
+        if (window.showToast) showToast(settings.lang === 'ru' ? 'Обработка промокода...' : 'Processing code...', 'info');
+        
+        // 2. Ждем секунду и плавно СВОРАЧИВАЕМ приложение (оно не закрывается!)
+        setTimeout(() => {
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=promo_${code}`);
             }
-        } else {
-            alert("Это работает только внутри Telegram!");
-        }
+        }, 1200);
+        
         promoCodeInput.value = '';
     }
 
@@ -1673,29 +1673,66 @@ document.addEventListener('DOMContentLoaded', () => {
             const plan = e.target.dataset.plan;
             const stars = e.target.dataset.stars;
             const isRu = window.appState && window.appState.lang === 'ru';
-            
+
             if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.showConfirm(
                     isRu ? `Перейти к оплате ⭐️${stars}?` : `Proceed to pay ⭐️${stars}?`,
                     (confirmed) => {
                         if (confirmed) {
-                            try {
-                                // Пытаемся отправить команду на оплату в бота
-                                const payload = JSON.stringify({ action: 'pay_stars', plan: plan, stars: stars });
-                                window.Telegram.WebApp.sendData(payload);
-                                
-                            } catch (err) {
-                                // Если Telegram заблокировал отправку
-                                alert("❌ ОШИБКА ОПЛАТЫ:\n\nОплата недоступна из этого меню. Закройте окно, напишите боту /start и нажмите на кнопку '📱 Open FiMax' внизу экрана (вместо клавиатуры).");
-                            }
+                            // 1. Показываем тост внутри приложения
+                            if(window.showToast) showToast(isRu ? 'Создаем счет...' : 'Generating invoice...', 'info');
+
+                            // 2. Сворачиваем приложение к боту для оплаты
+                            setTimeout(() => {
+                                window.Telegram.WebApp.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=pay_${plan}`);
+                            }, 1000);
                         }
                     }
                 );
-            } else {
-                alert("Оплата доступна только в приложении Telegram.");
             }
         });
     });
+
+    // === СИНХРОНИЗАЦИЯ СТАТУСА ПОДПИСКИ (ОБНОВЛЕНИЕ БЕЙДЖА "PREMIUM") ===
+    async function syncSubscriptionUI() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let subEndFromUrl = urlParams.get('sub_end');
+
+        // Если зашли по ссылке с обновленными данными из бота - сохраняем их
+        if (subEndFromUrl && subEndFromUrl !== "none") {
+            await AppStorage.set('premium_end', subEndFromUrl);
+        } else if (subEndFromUrl === "none") {
+            await AppStorage.set('premium_end', '');
+        }
+
+        // Берем актуальный сохраненный статус
+        const savedSubEnd = await AppStorage.get('premium_end');
+        const statusBadge = document.querySelector('.status-badge');
+
+        if (statusBadge) {
+            if (savedSubEnd) {
+                const dateObj = new Date(savedSubEnd);
+                if (dateObj > new Date()) { // Подписка активна
+                    const dateStr = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
+                    statusBadge.textContent = `Premium (до ${dateStr})`;
+                    statusBadge.className = 'status-badge';
+                    // Делаем бейдж зеленым и красивым
+                    statusBadge.style.background = 'rgba(48, 209, 88, 0.15)';
+                    statusBadge.style.color = 'var(--profit-green)';
+                    statusBadge.style.border = '1px solid rgba(48, 209, 88, 0.3)';
+                } else { // Истекла
+                    statusBadge.textContent = 'Free Plan (Expired)';
+                    statusBadge.className = 'status-badge free';
+                }
+            } else { // Никогда не было
+                statusBadge.textContent = 'Free Plan';
+                statusBadge.className = 'status-badge free';
+            }
+        }
+    }
+
+    // Запускаем синхронизацию интерфейса при загрузке настроек
+    syncSubscriptionUI();
 
     loadSettings();
 });

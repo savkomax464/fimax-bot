@@ -149,63 +149,57 @@ def set_trial_used(user_id):
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    add_user(message.from_user.id, message.from_user.username)
+    user_id = message.from_user.id
+    username = message.from_user.username
+    add_user(user_id, username)
+    user = get_user(user_id)
+    
+    args = message.text.split()
+    
+    # === 1. ОБРАБОТКА ДИПЛИНКОВ (ПРОМО И ОПЛАТА) ИЗ СВЕРНУТОГО ПРИЛОЖЕНИЯ ===
+    if len(args) > 1:
+        payload = args[1]
+        
+        if payload.startswith("promo_"):
+            code = payload.replace("promo_", "")
+            days = use_promocode(code)
+            if days:
+                new_end = update_subscription(user_id, days)
+                # Даем кнопку с ОБНОВЛЕННЫМ статусом для возврата в приложение
+                kb = types.InlineKeyboardMarkup(inline_keyboard=[[
+                    types.InlineKeyboardButton(text="📱 Вернуться в FiMax", web_app=WebAppInfo(url=f"{WEBAPP_URL}?sub_end={new_end.isoformat()}"))
+                ]])
+                return await message.answer(f"✅ Промокод применен!\nДобавлено: {days} дней.\nАктивно до: <b>{new_end.strftime('%Y-%m-%d')}</b>", parse_mode="HTML", reply_markup=kb)
+            else:
+                return await message.answer("❌ Неверный или уже использованный промокод.")
+                
+        elif payload.startswith("pay_"):
+            plan_id = payload.replace("pay_", "")
+            if plan_id in PLANS:
+                plan = PLANS[plan_id]
+                prices = [LabeledPrice(label=plan["name"], amount=plan["stars"])]
+                return await bot.send_invoice(
+                    chat_id=message.chat.id, title="FiMax Premium",
+                    description=f"Подписка: {plan['name']}",
+                    payload=plan_id, provider_token="", currency="XTR", prices=prices
+                )
+
+    # === 2. ОБЫЧНЫЙ СТАРТ И СИНХРОНИЗАЦИЯ ===
+    # Берем дату окончания подписки (если есть)
+    sub_end = user[2] if user and user[2] else "none"
+    
+    # Приклеиваем статус подписки к ссылке WebApp!
+    sync_url = f"{WEBAPP_URL}?sub_end={sub_end}"
     
     keyboard = types.ReplyKeyboardMarkup(
-        keyboard=[[types.KeyboardButton(text="📱 Open FiMax", web_app=WebAppInfo(url=WEBAPP_URL))]],
+        keyboard=[[types.KeyboardButton(text="📱 Open FiMax", web_app=WebAppInfo(url=sync_url))]],
         resize_keyboard=True
     )
     
     await message.answer(
-        "Welcome to FiMax! 📊\n\nTrack your portfolio, analyze performance, and get AI insights. Click the button below to open the app.",
+        "Welcome to FiMax! 📊\n\nTrack your portfolio and get AI insights. Click the button below to open.",
         reply_markup=keyboard
     )
-
-# --- ПРИЕМ ДАННЫХ ИЗ WEB APP (Оплата и Промокоды) ---
-@dp.message(F.web_app_data)
-async def handle_webapp_data(message: types.Message):
-    # Получаем данные, которые прислал app.js
-    data = json.loads(message.web_app_data.data)
-    user_id = message.from_user.id
-    
-    # 1. ЕСЛИ ПРИШЛА КОМАНДА ОПЛАТЫ ЗВЕЗДАМИ
-    if data.get("action") == "pay_stars":
-        plan_id = data.get("plan")
-        if plan_id not in PLANS:
-            return await message.answer("❌ Ошибка: неверный тариф.")
-            
-        plan_info = PLANS[plan_id]
-        
-        # Выдаем триал, если он еще не использовался
-        user = get_user(user_id)
-        if user and user[4] == 0: # trial_used == 0
-            update_subscription(user_id, 7)
-            set_trial_used(user_id)
-            await message.answer("🎉 Вы активировали 7 дней бесплатно! Теперь вы можете оплатить подписку для продления.")
-            
-        # Формируем счет на Telegram Stars
-        prices = [LabeledPrice(label=plan_info["name"], amount=plan_info["stars"])]
-        
-        await bot.send_invoice(
-            chat_id=message.chat.id,
-            title="FiMax Premium",
-            description=f"Подписка: {plan_info['name']}",
-            payload=plan_id,
-            provider_token="", # Для Stars токен должен быть пустым!
-            currency="XTR",    # XTR - это валюта Telegram Stars
-            prices=prices
-        )
-
-    # 2. ЕСЛИ ПРИШЕЛ ПРОМОКОД ИЗ НАСТРОЕК
-    elif data.get("action") == "promo_code":
-        code = data.get("code")
-        days = use_promocode(code)
-        
-        if days:
-            new_end = update_subscription(user_id, days)
-            await message.answer(f"✅ Промокод успешно применен!\nДобавлено: {days} дней.\nАктивно до: <b>{new_end.strftime('%Y-%m-%d')}</b>", parse_mode="HTML")
-        else:
-            await message.answer("❌ Неверный или уже использованный промокод.")
 
 @dp.pre_checkout_query()
 async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
@@ -215,22 +209,24 @@ async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
 async def process_successful_payment(message: types.Message):
     plan_id = message.successful_payment.invoice_payload
     user_id = message.from_user.id
-    
-    # Гарантируем наличие в БД
+
     if not get_user(user_id):
         add_user(user_id, message.from_user.username)
-    
+
     if plan_id in PLANS:
         days = PLANS[plan_id]["days"]
-        new_end_date = update_subscription(user_id, days)
-        if new_end_date:
-            date_str = new_end_date.strftime("%Y-%m-%d %H:%M")
-            
-            await message.answer(
-                f"✅ Payment successful! Thank you for buying {PLANS[plan_id]['name']}!\n\n"
-                f"Your Premium is active until: <b>{date_str}</b>",
-                parse_mode="HTML"
-            )
+        new_end = update_subscription(user_id, days)
+
+        # Кнопка для возврата в приложение, которая мгновенно обновит статус Premium
+        kb = types.InlineKeyboardMarkup(inline_keyboard=[[
+            types.InlineKeyboardButton(text="📱 Открыть FiMax (Premium)", web_app=WebAppInfo(url=f"{WEBAPP_URL}?sub_end={new_end.isoformat()}"))
+        ]])
+
+        await message.answer(
+            f"✅ Оплата успешна! Вы купили {PLANS[plan_id]['name']}!\n\n"
+            f"Premium активен до: <b>{new_end.strftime('%Y-%m-%d')}</b>",
+            parse_mode="HTML", reply_markup=kb
+        )
 
 # --- ПРОМОКОДЫ (Для админа и пользователей) ---
 @dp.message(Command("promo"))
