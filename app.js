@@ -1618,8 +1618,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === ВСТАВЬТЕ СЮДА ИМЯ ВАШЕГО БОТА (без @) ===
-    const BOT_USERNAME = "fimaxbot";
+    // === ДИНАМИЧЕСКОЕ ПОЛУЧЕНИЕ ИМЕНИ БОТА ===
+    const urlParams = new URLSearchParams(window.location.search);
+    const dynamicBotUsername = urlParams.get('bot') || "fimaxbot";
 
     // === 1. ТИХАЯ ЛОГИКА ПРОМОКОДОВ (БЕЗ СВОРАЧИВАНИЯ) ===
     function applyPromoCode(event) {
@@ -1706,9 +1707,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             // 1. Показываем тост внутри приложения
                             if(window.showToast) showToast(isRu ? 'Создаем счет...' : 'Generating invoice...', 'info');
 
-                            // 2. Сворачиваем приложение к боту для оплаты
+                            // 2. Сворачиваем приложение к ТВОЕМУ боту для оплаты
                             setTimeout(() => {
-                                window.Telegram.WebApp.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=pay_${plan}`);
+                                window.Telegram.WebApp.openTelegramLink(`https://t.me/${dynamicBotUsername}?start=pay_${plan}`);
                             }, 1000);
                         }
                     }

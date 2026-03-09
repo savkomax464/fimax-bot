@@ -11,26 +11,21 @@ from aiogram.types import WebAppInfo, PreCheckoutQuery, LabeledPrice
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiohttp import web
 
-# --- NEW IMPORTS FOR POSTGRESQL ---
-from sqlalchemy import select, Integer, String, DateTime, Boolean
+# --- ДОБАВЛЕНЫ BigInteger и text ---
+from sqlalchemy import select, Integer, String, DateTime, Boolean, BigInteger, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import insert
 
-# Load environment variables
 load_dotenv()
 
-# ==========================================
-# === BOT SETTINGS ===
-# ==========================================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://github.com")
 DATABASE_URL = os.getenv("DATABASE_URL")
 PORT = int(os.getenv("PORT", 8080))
 
-# Reliably convert Render URL for async driver
 if DATABASE_URL:
     if DATABASE_URL.startswith("postgresql://"):
         DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
@@ -40,7 +35,6 @@ if DATABASE_URL:
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is not set!")
 
-# Prices in Telegram Stars
 PLANS = {
     "1_month": {"stars": 150, "days": 30, "name": "1 Month Premium"},
     "6_months": {"stars": 700, "days": 180, "name": "6 Months Premium"},
@@ -50,30 +44,20 @@ PLANS = {
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# ==========================================
-# === DATABASE (POSTGRESQL + SQLAlchemy) ===
-# ==========================================
-
-# Create async engine for database connection
 async_engine = create_async_engine(DATABASE_URL)
-# Create session factory
 async_session = async_sessionmaker(async_engine, expire_on_commit=False)
 
-# Base class for all models (tables)
 class Base(DeclarativeBase):
     pass
 
-
-# --- TABLE MODELS ---
-
 class User(Base):
     __tablename__ = 'users'
-    user_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    # ИСПРАВЛЕНИЕ: Используем BigInteger для длинных ID Телеграма
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
     username: Mapped[str] = mapped_column(String, nullable=True)
     subscription_end: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
     notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     trial_used: Mapped[bool] = mapped_column(Boolean, default=False)
-
 
 class Promocode(Base):
     __tablename__ = 'promocodes'
@@ -81,14 +65,14 @@ class Promocode(Base):
     duration_days: Mapped[int] = mapped_column(Integer)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-
-# --- REWRITTEN DATABASE FUNCTIONS ---
-
 async def init_db():
-    """Create tables if they don't exist"""
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
+        # АВТО-МИГРАЦИЯ: Безопасно меняем тип колонки на BIGINT
+        try:
+            await conn.execute(text("ALTER TABLE users ALTER COLUMN user_id TYPE BIGINT;"))
+        except Exception as e:
+            pass  # Если колонка уже обновлена, пропускаем
 
 async def add_user(user_id, username):
     async with async_session() as session:
@@ -96,34 +80,33 @@ async def add_user(user_id, username):
         await session.execute(stmt)
         await session.commit()
 
-
 async def get_user(user_id):
     async with async_session() as session:
-        user = await session.get(User, user_id)
-        return user
+        return await session.get(User, user_id)
 
-
-async def update_subscription(user_id, days):
+async def update_subscription(user_id, days, username=None):
     async with async_session() as session:
         user = await session.get(User, user_id)
-        if not user:
-            return False
-
         now = datetime.datetime.now()
-        current_end = user.subscription_end
+        
+        # Если юзер не был найден, создаем его
+        if not user:
+            user = User(user_id=user_id, username=username, subscription_end=now)
+            session.add(user)
 
-        if current_end and current_end > now:
+        current_end = user.subscription_end or now
+
+        if current_end > now:
             new_end = current_end + timedelta(days=days)
         else:
             new_end = now + timedelta(days=days)
 
-        if days >= 36500:  # Lifetime subscription
+        if days >= 36500:
             new_end = now + timedelta(days=36500)
 
         user.subscription_end = new_end
         await session.commit()
         return new_end
-
 
 async def toggle_notifications(user_id, status: bool):
     async with async_session() as session:
@@ -132,12 +115,10 @@ async def toggle_notifications(user_id, status: bool):
             user.notifications_enabled = status
             await session.commit()
 
-
 async def get_users_for_report():
     async with async_session() as session:
         result = await session.execute(select(User.user_id).where(User.notifications_enabled == True))
         return result.scalars().all()
-
 
 async def create_promocode(code, duration_days):
     async with async_session() as session:
@@ -150,18 +131,15 @@ async def create_promocode(code, duration_days):
             await session.rollback()
             return False
 
-
 async def use_promocode(code):
     async with async_session() as session:
         result = await session.execute(select(Promocode).where(Promocode.code == code, Promocode.is_active == True))
         promo = result.scalar_one_or_none()
-
         if promo:
             promo.is_active = False
             await session.commit()
             return promo.duration_days
         return None
-
 
 async def set_trial_used(user_id):
     async with async_session() as session:
@@ -170,10 +148,6 @@ async def set_trial_used(user_id):
             user.trial_used = True
             await session.commit()
 
-# ==========================================
-# === TELEGRAM BOT LOGIC ===
-# ==========================================
-
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     user_id = message.from_user.id
@@ -181,8 +155,11 @@ async def cmd_start(message: types.Message):
     await add_user(user_id, username)
     user = await get_user(user_id)
 
-    args = message.text.split()
+    # Получаем имя бота автоматически
+    bot_me = await bot.get_me()
+    bot_username = bot_me.username
 
+    args = message.text.split()
     if len(args) > 1:
         payload = args[1]
         if payload.startswith("pay_"):
@@ -200,7 +177,8 @@ async def cmd_start(message: types.Message):
     if user and user.subscription_end:
         sub_end_iso = user.subscription_end.isoformat()
 
-    sync_url = f"{WEBAPP_URL}?sub_end={sub_end_iso}"
+    # Передаем имя бота в WebApp
+    sync_url = f"{WEBAPP_URL}?sub_end={sub_end_iso}&bot={bot_username}"
 
     keyboard = types.ReplyKeyboardMarkup(
         keyboard=[[types.KeyboardButton(text="📱 Open FiMax", web_app=WebAppInfo(url=sync_url))]],
@@ -211,7 +189,6 @@ async def cmd_start(message: types.Message):
         reply_markup=keyboard
     )
 
-
 @dp.message(F.web_app_data)
 async def handle_webapp_data(message: types.Message):
     try:
@@ -221,11 +198,15 @@ async def handle_webapp_data(message: types.Message):
             code = data.get("code")
             days = await use_promocode(code)
             if days:
-                new_end = await update_subscription(user_id, days)
+                new_end = await update_subscription(user_id, days, message.from_user.username)
                 
-                kb = types.InlineKeyboardMarkup(inline_keyboard=[[
-                    types.InlineKeyboardButton(text="📱 Open FiMax (Premium)", web_app=WebAppInfo(url=f"{WEBAPP_URL}?sub_end={new_end.isoformat()}"))
-                ]])
+                bot_me = await bot.get_me()
+                sync_url = f"{WEBAPP_URL}?sub_end={new_end.isoformat()}&bot={bot_me.username}"
+                
+                kb = types.ReplyKeyboardMarkup(
+                    keyboard=[[types.KeyboardButton(text="📱 Open FiMax (Premium)", web_app=WebAppInfo(url=sync_url))]],
+                    resize_keyboard=True
+                )
                 
                 await message.answer(
                     f"✅ Promo code applied! {days} days added.\nValid until: <b>{new_end.strftime('%Y-%m-%d')}</b>",
@@ -237,31 +218,32 @@ async def handle_webapp_data(message: types.Message):
     except Exception as e:
         print(f"Error handling webapp data: {e}")
 
-
 @dp.pre_checkout_query()
 async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
-
 
 @dp.message(F.successful_payment)
 async def process_successful_payment(message: types.Message):
     plan_id = message.successful_payment.invoice_payload
     user_id = message.from_user.id
-
     await add_user(user_id, message.from_user.username)
 
     if plan_id in PLANS:
         days = PLANS[plan_id]["days"]
-        new_end = await update_subscription(user_id, days)
-        kb = types.InlineKeyboardMarkup(inline_keyboard=[[
-            types.InlineKeyboardButton(text="📱 Open FiMax (Premium)", web_app=WebAppInfo(url=f"{WEBAPP_URL}?sub_end={new_end.isoformat()}"))
-        ]])
+        new_end = await update_subscription(user_id, days, message.from_user.username)
+        
+        bot_me = await bot.get_me()
+        sync_url = f"{WEBAPP_URL}?sub_end={new_end.isoformat()}&bot={bot_me.username}"
+        
+        kb = types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="📱 Open FiMax (Premium)", web_app=WebAppInfo(url=sync_url))]],
+            resize_keyboard=True
+        )
         await message.answer(
             f"✅ Payment successful! You purchased {PLANS[plan_id]['name']}!\n\n"
             f"Premium active until: <b>{new_end.strftime('%Y-%m-%d')}</b>",
             parse_mode="HTML", reply_markup=kb
         )
-
 
 @dp.message(Command("promo"))
 async def cmd_create_promo(message: types.Message):
@@ -278,7 +260,6 @@ async def cmd_create_promo(message: types.Message):
     else:
         await message.answer("❌ This code already exists.")
 
-
 @dp.message(Command("use"))
 async def cmd_use_promo(message: types.Message):
     args = message.text.split()
@@ -287,18 +268,19 @@ async def cmd_use_promo(message: types.Message):
     code = args[1].upper()
     days = await use_promocode(code)
     if days:
-        new_end = await update_subscription(message.from_user.id, days)
+        new_end = await update_subscription(message.from_user.id, days, message.from_user.username)
         await message.answer(f"✅ Promo code applied! {days} days added.\nValid until: {new_end.strftime('%Y-%m-%d')}")
     else:
         await message.answer("❌ Invalid or expired promo code.")
-
 
 async def send_weekly_reports():
     users_to_notify = await get_users_for_report()
     for user_id in users_to_notify:
         try:
+            bot_me = await bot.get_me()
+            sync_url = f"{WEBAPP_URL}?bot={bot_me.username}"
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-                [types.InlineKeyboardButton(text="📊 View Weekly Summary", web_app=WebAppInfo(url=WEBAPP_URL))]
+                [types.InlineKeyboardButton(text="📊 View Weekly Summary", web_app=WebAppInfo(url=sync_url))]
             ])
             await bot.send_message(
                 user_id,
@@ -309,32 +291,18 @@ async def send_weekly_reports():
         except Exception as e:
             print(f"Failed to send report to {user_id}: {e}")
 
-
-# ==========================================
-# === HTTP SERVER FOR RENDER HEALTH CHECK ===
-# ==========================================
-
 async def health_handler(request):
-    """Simple health check endpoint for Render"""
     return web.json_response({"status": "ok", "bot": "running"})
 
-
 async def start_http_server():
-    """Start HTTP server on Render's PORT"""
     app = web.Application()
     app.router.add_get('/', health_handler)
     app.router.add_get('/health', health_handler)
-
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', PORT)
     await site.start()
     print(f"HTTP server started on port {PORT}")
-
-
-# ==========================================
-# === STARTUP ===
-# ==========================================
 
 async def main():
     print("Initializing Database...")
@@ -350,7 +318,6 @@ async def main():
 
     print("Bot is polling...")
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
