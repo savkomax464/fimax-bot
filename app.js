@@ -3,7 +3,7 @@ try {
     if (localStorage.getItem('fimax_theme') === 'light') {
         document.documentElement.setAttribute('data-theme', 'light');
     }
-} catch(e) {}
+} catch (e) {}
 
 // =================================================================
 // === УМНОЕ ОБЛАКО TELEGRAM (CLOUD STORAGE С ОБХОДОМ ЛИМИТА 4 КБ) ===
@@ -11,8 +11,8 @@ try {
 window.AppStorage = {
     // Проверяем, доступно ли облако (если открыто в браузере вне ТГ, будет fallback на localStorage)
     isSupported: !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.CloudStorage),
-    
-    async set(key, value) {
+
+    asyncset(key, value) {
         if (!this.isSupported) return localStorage.setItem(key, value);
 
         return new Promise((resolve, reject) => {
@@ -21,12 +21,12 @@ window.AppStorage = {
             for (let i = 0; i < value.length; i += chunkSize) {
                 chunks.push(value.slice(i, i + chunkSize));
             }
-            
+
             // Сохраняем информацию о том, на сколько кусков разбиты данные
             window.Telegram.WebApp.CloudStorage.setItem(key + '_meta', chunks.length.toString(), (err) => {
                 if (err) return reject(err);
                 if (chunks.length === 0) return resolve();
-                
+
                 let saved = 0;
                 chunks.forEach((chunk, idx) => {
                     window.Telegram.WebApp.CloudStorage.setItem(key + '_' + idx, chunk, (err2) => {
@@ -38,14 +38,14 @@ window.AppStorage = {
             });
         });
     },
-    
-    async get(key) {
+
+    asyncget(key) {
         if (!this.isSupported) return localStorage.getItem(key);
 
         return new Promise((resolve, reject) => {
             window.Telegram.WebApp.CloudStorage.getItem(key + '_meta', (err, metaStr) => {
                 if (err) return reject(err);
-                
+
                 // Если меты нет, возможно это старые данные или их вообще нет
                 if (!metaStr) {
                     window.Telegram.WebApp.CloudStorage.getItem(key, (err3, oldVal) => {
@@ -53,13 +53,13 @@ window.AppStorage = {
                     });
                     return;
                 }
-                
+
                 const count = parseInt(metaStr);
                 if (count === 0) return resolve('');
-                
+
                 const keysToFetch = [];
                 for (let i = 0; i < count; i++) keysToFetch.push(key + '_' + i);
-                
+
                 // Скачиваем все куски разом
                 window.Telegram.WebApp.CloudStorage.getItems(keysToFetch, (err2, values) => {
                     if (err2) return reject(err2);
@@ -72,7 +72,7 @@ window.AppStorage = {
             });
         });
     },
-    
+
     async clearAll() {
         if (!this.isSupported) return localStorage.clear();
 
@@ -115,7 +115,7 @@ window.formatMoney = function(val, showSign = false) {
 // =================================================================
 window.showWeeklySummary = async function(isManual = false) {
     const isRu = window.appState && window.appState.lang === 'ru';
-    
+
     let historyData = null;
     try {
         const rawData = await AppStorage.get('portfolioData');
@@ -123,28 +123,29 @@ window.showWeeklySummary = async function(isManual = false) {
     } catch (e) {
         console.error("Error loading data for summary:", e);
     }
-    
+
     if (!historyData || Object.keys(historyData).length === 0) {
         if (isManual && window.showToast) window.showToast(isRu ? 'Нет данных для отчета. Добавьте активы.' : 'No data for report. Add some assets.', 'error');
         return;
     }
 
-    let totalCurrent = 0, total7DaysAgo = 0;
+    let totalCurrent = 0,
+        total7DaysAgo = 0;
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() - 7);
 
     Object.keys(historyData).forEach(id => {
         const history = historyData[id];
         if (!history || history.length === 0) return;
-        
+
         totalCurrent += history[history.length - 1].value;
-        
-        let val7DaysAgo = history[0].value; 
+
+        let val7DaysAgo = history[0].value;
         for (let i = history.length - 1; i >= 0; i--) {
             const recordDate = new Date(history[i].date);
-            if (recordDate <= targetDate) { 
-                val7DaysAgo = history[i].value; 
-                break; 
+            if (recordDate <= targetDate) {
+                val7DaysAgo = history[i].value;
+                break;
             }
         }
         total7DaysAgo += val7DaysAgo;
@@ -158,7 +159,7 @@ window.showWeeklySummary = async function(isManual = false) {
 
     const modal = document.getElementById('modalWeeklySummary');
     if (!modal) return;
-    
+
     document.getElementById('ws-title').textContent = isRu ? '📅 Отчет за неделю' : '📅 Weekly Summary';
     document.getElementById('ws-close').textContent = isRu ? 'Закрыть' : 'Close';
 
@@ -188,7 +189,7 @@ window.showToast = function(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
+
     // Иконки в зависимости от типа
     let icon = '';
     if (type === 'success') icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--profit-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
@@ -219,13 +220,13 @@ document.addEventListener('DOMContentLoaded', function() {
         tg.ready();
         tg.expand();
 
-        const tgUser = tg.initDataUnsafe?.user;
+        const tgUser = tg.initDataUnsafe ? .user;
         if (tgUser) {
             const firstName = tgUser.first_name || '';
             const lastName = tgUser.last_name || '';
             const fullName = `${firstName} ${lastName}`.trim() || 'Telegram User';
             const username = tgUser.username ? `@${tgUser.username}` : 'No username';
-            const photoUrl = tgUser.photo_url; 
+            const photoUrl = tgUser.photo_url;
 
             const profileNameEl = document.querySelector('.profile-name');
             if (profileNameEl) profileNameEl.textContent = fullName;
@@ -237,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const emailInput = document.getElementById('email');
             if (emailInput) {
                 emailInput.value = username;
-                emailInput.type = "text"; 
+                emailInput.type = "text";
                 const emailLabel = emailInput.previousElementSibling;
                 if (emailLabel && emailLabel.tagName.toLowerCase() === 'LABEL') emailLabel.textContent = 'Telegram Username';
             }
@@ -271,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const activeLinks = document.querySelectorAll(`.nav-link[data-page="${pageId}"]`);
         activeLinks.forEach(link => link.classList.add('active'));
-        
+
         if (window.innerWidth <= 900) document.body.classList.add('sidebar-closed');
 
         document.dispatchEvent(new CustomEvent('pageOpened', { detail: pageId }));
@@ -306,235 +307,242 @@ document.addEventListener('DOMContentLoaded', function() {
 // === СТРАНИЦА ANALYTICS ===
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    let assetHistory = {};
-    let assetMeta = {};
-    let activeTimeframe = 7;
+            let assetHistory = {};
+            let assetMeta = {};
+            let activeTimeframe = 7;
 
-    // НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ ФИЛЬТРОВ АНАЛИТИКИ
-    window.analyticsNameFilter = null;
-    window.analyticsCategoryFilter = null;
+            // НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ ФИЛЬТРОВ АНАЛИТИКИ
+            window.analyticsNameFilter = null;
+            window.analyticsCategoryFilter = null;
 
-    const analyticsContent = document.getElementById('analytics-content');
-    const noDataMessage = document.getElementById('no-data-message');
-    const mainChartContainer = document.getElementById('main-performance-chart');
+            const analyticsContent = document.getElementById('analytics-content');
+            const noDataMessage = document.getElementById('no-data-message');
+            const mainChartContainer = document.getElementById('main-performance-chart');
 
-    // Функции UI для фильтров
-    window.toggleAnalyticsFilterPop = function(e) {
-        e.stopPropagation();
-        const pop = document.getElementById('analytics-filter-pop');
-        const isActive = pop.classList.contains('active');
-        document.querySelectorAll('.rec-popover').forEach(p => p.classList.remove('active'));
-        if (!isActive) pop.classList.add('active');
-    };
+            // Функции UI для фильтров
+            window.toggleAnalyticsFilterPop = function(e) {
+                e.stopPropagation();
+                const pop = document.getElementById('analytics-filter-pop');
+                const isActive = pop.classList.contains('active');
+                document.querySelectorAll('.rec-popover').forEach(p => p.classList.remove('active'));
+                if (!isActive) pop.classList.add('active');
+            };
 
-    window.setAnalyticsNameFilter = function(name) {
-        window.analyticsNameFilter = name || null;
-        document.querySelectorAll('.rec-popover').forEach(p => p.classList.remove('active'));
-        renderAnalytics();
-    };
+            window.setAnalyticsNameFilter = function(name) {
+                window.analyticsNameFilter = name || null;
+                document.querySelectorAll('.rec-popover').forEach(p => p.classList.remove('active'));
+                renderAnalytics();
+            };
 
-    window.setAnalyticsCategoryFilter = function(category) {
-        window.analyticsCategoryFilter = category || null;
-        document.querySelectorAll('.rec-popover').forEach(p => p.classList.remove('active'));
-        renderAnalytics();
-    };
+            window.setAnalyticsCategoryFilter = function(category) {
+                window.analyticsCategoryFilter = category || null;
+                document.querySelectorAll('.rec-popover').forEach(p => p.classList.remove('active'));
+                renderAnalytics();
+            };
 
-    function updateAnalyticsDropdowns() {
-        const catListEl = document.getElementById('analyticsFilterCategoryList');
-        const nameListEl = document.getElementById('analyticsFilterNameList');
-        const isRu = window.appState && window.appState.lang === 'ru';
-        if(!catListEl || !nameListEl) return;
+            function updateAnalyticsDropdowns() {
+                const catListEl = document.getElementById('analyticsFilterCategoryList');
+                const nameListEl = document.getElementById('analyticsFilterNameList');
+                const isRu = window.appState && window.appState.lang === 'ru';
+                if (!catListEl || !nameListEl) return;
 
-        const uniqueCategories = [...new Set(Object.values(assetMeta).map(m => m.category))].filter(Boolean);
-        const uniqueNames = [...new Set(Object.values(assetMeta).map(m => m.name))].filter(Boolean);
+                const uniqueCategories = [...new Set(Object.values(assetMeta).map(m => m.category))].filter(Boolean);
+                const uniqueNames = [...new Set(Object.values(assetMeta).map(m => m.name))].filter(Boolean);
 
-        let nameHtml = `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${window.analyticsNameFilter === null ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${window.analyticsNameFilter === null ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsNameFilter('')">${isRu ? 'Все активы' : 'All Asset Names'}</button>`;
-        uniqueNames.forEach(name => {
-            const isActive = window.analyticsNameFilter === name;
-            nameHtml += `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${isActive ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${isActive ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsNameFilter('${name}')">${name}</button>`;
-        });
-        nameListEl.innerHTML = nameHtml;
+                let nameHtml = `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${window.analyticsNameFilter === null ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${window.analyticsNameFilter === null ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsNameFilter('')">${isRu ? 'Все активы' : 'All Asset Names'}</button>`;
+                uniqueNames.forEach(name => {
+                    const isActive = window.analyticsNameFilter === name;
+                    nameHtml += `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${isActive ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${isActive ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsNameFilter('${name}')">${name}</button>`;
+                });
+                nameListEl.innerHTML = nameHtml;
 
-        let catHtml = `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${window.analyticsCategoryFilter === null ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${window.analyticsCategoryFilter === null ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsCategoryFilter('')">${isRu ? 'Все категории' : 'All Categories'}</button>`;
-        uniqueCategories.forEach(cat => {
-            const isActive = window.analyticsCategoryFilter === cat;
-            catHtml += `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${isActive ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${isActive ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsCategoryFilter('${cat}')">${cat}</button>`;
-        });
-        catListEl.innerHTML = catHtml;
-    }
-
-    function parseDate(dateStr) { return dateStr ? new Date(dateStr) : null; }
-
-    function findValueAtDate(history, targetDate) {
-        let value = 0;
-        if (!history || !targetDate) return 0;
-        for (let i = history.length - 1; i >= 0; i--) {
-            const recordDate = parseDate(history[i].date);
-            if (recordDate && recordDate <= targetDate) { value = history[i].value; break; }
-        }
-        return value;
-    }
-
-    function formatCurrency(value, showSign = false) {
-        return window.formatMoney(value, showSign);
-    }
-
-    function formatDate(dateObj) {
-        if (!dateObj) return '';
-        const day = dateObj.getDate().toString().padStart(2, '0');
-        const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-        return `${day}.${month}`;
-    }
-
-    async function loadData() {
-        try {
-            const portfolioDataRaw = await AppStorage.get('portfolioData');
-            if (portfolioDataRaw) {
-                const parsed = JSON.parse(portfolioDataRaw);
-                assetMeta = parsed.assetMeta || {};
-                assetHistory = parsed.assetHistory || {};
-                return true;
+                let catHtml = `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${window.analyticsCategoryFilter === null ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${window.analyticsCategoryFilter === null ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsCategoryFilter('')">${isRu ? 'Все категории' : 'All Categories'}</button>`;
+                uniqueCategories.forEach(cat => {
+                    const isActive = window.analyticsCategoryFilter === cat;
+                    catHtml += `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${isActive ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${isActive ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsCategoryFilter('${cat}')">${cat}</button>`;
+                });
+                catListEl.innerHTML = catHtml;
             }
-        } catch (e) { console.error("Ошибка загрузки аналитики:", e); }
-        assetMeta = {}; assetHistory = {};
-        return false;
-    }
 
-    function processData(days) {
-        const endDate = new Date();
-        let periodStartDate = new Date();
-        if (days > 0) {
-            periodStartDate.setDate(endDate.getDate() - (days - 1));
-        } else {
-            let firstDateEver = new Date();
-            Object.values(assetHistory).forEach(h => {
-                if (h && h.length > 0) { const d = parseDate(h[0].date); if (d && d < firstDateEver) firstDateEver = d; }
-            });
-            periodStartDate = firstDateEver;
-        }
-        periodStartDate.setHours(0, 0, 0, 0);
+            function parseDate(dateStr) { return dateStr ? new Date(dateStr) : null; }
 
-        const comparisonDate = new Date(periodStartDate);
-        comparisonDate.setDate(comparisonDate.getDate() - 1);
-        
-        // --- ПРИМЕНЕНИЕ ФИЛЬТРОВ К АНАЛИТИКЕ ---
-        const searchInput = document.getElementById('analyticsSearch');
-        const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            function findValueAtDate(history, targetDate) {
+                let value = 0;
+                if (!history || !targetDate) return 0;
+                for (let i = history.length - 1; i >= 0; i--) {
+                    const recordDate = parseDate(history[i].date);
+                    if (recordDate && recordDate <= targetDate) { value = history[i].value; break; }
+                }
+                return value;
+            }
 
-        const filteredAssetIds = Object.keys(assetMeta).filter(id => {
-            const meta = assetMeta[id];
-            const name = (meta.name || '').toLowerCase();
-            const category = (meta.category || '').toLowerCase();
-            
-            const matchesSearch = name.includes(term) || category.includes(term);
-            const matchesName = !window.analyticsNameFilter || meta.name === window.analyticsNameFilter;
-            const matchesCategory = !window.analyticsCategoryFilter || meta.category === window.analyticsCategoryFilter;
-            
-            return matchesSearch && matchesName && matchesCategory;
-        });
+            function formatCurrency(value, showSign = false) {
+                return window.formatMoney(value, showSign);
+            }
 
-        const assetPerformance = {};
-        let totalCurrentValue = 0, totalGainLoss = 0;
+            function formatDate(dateObj) {
+                if (!dateObj) return '';
+                const day = dateObj.getDate().toString().padStart(2, '0');
+                const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                return `${day}.${month}`;
+            }
 
-        filteredAssetIds.forEach(id => {
-            const history = assetHistory[id];
-            if (!history || history.length === 0) return;
-            const currentValue = history[history.length - 1].value;
-            const creationDate = parseDate(history[0].date);
-            const creationValue = history[0].value;
-            
-            let startValue = (days === 0) ? creationValue : ((creationDate >= periodStartDate) ? creationValue : findValueAtDate(history, comparisonDate));
-            const changeValue = currentValue - startValue;
-            let changePercent = (startValue > 0) ? (changeValue / startValue) * 100 : null;
-            
-            assetPerformance[id] = { name: assetMeta[id].name, category: assetMeta[id].category, currentValue, changeValue, changePercent };
-            totalGainLoss += changeValue;
-            totalCurrentValue += currentValue;
-        });
-        
-        const sortedAssets = Object.values(assetPerformance).sort((a, b) => b.changeValue - a.changeValue);
-        const bestPerformer = sortedAssets[0] || { name: 'N/A', changeValue: 0 };
-        const worstPerformer = sortedAssets[sortedAssets.length - 1] || { name: 'N/A', changeValue: 0 };
-        const totalStartValue = totalCurrentValue - totalGainLoss;
-        const kpiData = { totalValue: totalCurrentValue, totalGainLoss, totalGainLossPercent: (totalStartValue > 0) ? (totalGainLoss / totalStartValue) * 100 : 0, bestPerformer, worstPerformer };
-        
-        const allPoints = [];
-        filteredAssetIds.forEach(id => { 
-            const h = assetHistory[id];
-            if (h) allPoints.push(...h.map(p => parseDate(p.date))); 
-        });
-        const uniqueTimestamps = [...new Set(allPoints.filter(Boolean).map(d => d.getTime()))];
+            async function loadData() {
+                try {
+                    const portfolioDataRaw = await AppStorage.get('portfolioData');
+                    if (portfolioDataRaw) {
+                        const parsed = JSON.parse(portfolioDataRaw);
+                        assetMeta = parsed.assetMeta || {};
+                        assetHistory = parsed.assetHistory || {};
+                        return true;
+                    }
+                } catch (e) { console.error("Ошибка загрузки аналитики:", e); }
+                assetMeta = {};
+                assetHistory = {};
+                return false;
+            }
 
-        let historyTimestamps;
-        if (days > 0) {
-            historyTimestamps = uniqueTimestamps.filter(ts => ts >= periodStartDate.getTime() && ts <= endDate.getTime());
-            let anchorTs = 0;
-            uniqueTimestamps.forEach(ts => { if (ts < periodStartDate.getTime() && ts > anchorTs) anchorTs = ts; });
-            if (anchorTs > 0) historyTimestamps.unshift(anchorTs);
-        } else { historyTimestamps = uniqueTimestamps; }
-        
-        historyTimestamps.sort((a,b) => a - b);
-        
-        const aggregatedHistory = [...new Set(historyTimestamps)].map(timestamp => {
-            const dateObj = new Date(timestamp);
-            let dailyTotal = 0;
-            filteredAssetIds.forEach(id => { dailyTotal += findValueAtDate(assetHistory[id], dateObj); });
-            return { date: dateObj, value: dailyTotal };
-        });
+            function processData(days) {
+                const endDate = new Date();
+                let periodStartDate = new Date();
+                if (days > 0) {
+                    periodStartDate.setDate(endDate.getDate() - (days - 1));
+                } else {
+                    let firstDateEver = new Date();
+                    Object.values(assetHistory).forEach(h => {
+                        if (h && h.length > 0) { const d = parseDate(h[0].date); if (d && d < firstDateEver) firstDateEver = d; }
+                    });
+                    periodStartDate = firstDateEver;
+                }
+                periodStartDate.setHours(0, 0, 0, 0);
 
-        return { kpiData, aggregatedHistory, assetPerformance };
-    }
+                const comparisonDate = new Date(periodStartDate);
+                comparisonDate.setDate(comparisonDate.getDate() - 1);
 
-    function renderAnalytics() {
-        updateAnalyticsDropdowns();
+                // --- ПРИМЕНЕНИЕ ФИЛЬТРОВ К АНАЛИТИКЕ ---
+                const searchInput = document.getElementById('analyticsSearch');
+                const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
-        const { kpiData, aggregatedHistory, assetPerformance } = processData(activeTimeframe);
-        
-        if ((!kpiData.totalValue && kpiData.totalValue !== 0) || Object.keys(kpiData).length === 0) {
-            mainChartContainer.innerHTML = '<p style="text-align:center; color: var(--text-sec); padding-top: 50px;">No matching data.</p>';
-            document.getElementById('kpi-total-value').textContent = '$0.00';
-            document.getElementById('kpi-gain-loss').textContent = '$0.00';
-            document.getElementById('kpi-gain-loss').className = 'kpi-value';
-            document.getElementById('kpi-gain-loss-percent').textContent = '(0.00%)';
-            document.getElementById('kpi-gain-loss-percent').className = 'kpi-sub';
-            document.getElementById('kpi-best-performer').textContent = 'N/A';
-            document.getElementById('kpi-best-performer-change').textContent = '+$0.00';
-            document.getElementById('kpi-worst-performer').textContent = 'N/A';
-            document.getElementById('kpi-worst-performer-change').textContent = '-$0.00';
-            document.getElementById('asset-performance-tbody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-sec);">No assets match filters</td></tr>';
-            return;
-        }
-        
-        document.getElementById('kpi-total-value').textContent = formatCurrency(kpiData.totalValue);
-        document.getElementById('kpi-gain-loss').textContent = formatCurrency(kpiData.totalGainLoss, true);
-        document.getElementById('kpi-gain-loss').className = `kpi-value ${kpiData.totalGainLoss >= 0 ? 'green' : 'red'}`;
-        document.getElementById('kpi-gain-loss-percent').textContent = `(${kpiData.totalGainLossPercent.toFixed(2)}%)`;
-        document.getElementById('kpi-gain-loss-percent').className = `kpi-sub ${kpiData.totalGainLoss >= 0 ? 'green' : 'red'}`;
-        document.getElementById('kpi-best-performer').textContent = kpiData.bestPerformer.name;
-        document.getElementById('kpi-best-performer-change').textContent = formatCurrency(kpiData.bestPerformer.changeValue, true);
-        document.getElementById('kpi-worst-performer').textContent = kpiData.worstPerformer.name;
-        document.getElementById('kpi-worst-performer-change').textContent = formatCurrency(kpiData.worstPerformer.changeValue, true);
+                const filteredAssetIds = Object.keys(assetMeta).filter(id => {
+                    const meta = assetMeta[id];
+                    const name = (meta.name || '').toLowerCase();
+                    const category = (meta.category || '').toLowerCase();
 
-        renderMainChart(aggregatedHistory);
-        renderAssetTable(assetPerformance);
-    }
+                    const matchesSearch = name.includes(term) || category.includes(term);
+                    const matchesName = !window.analyticsNameFilter || meta.name === window.analyticsNameFilter;
+                    const matchesCategory = !window.analyticsCategoryFilter || meta.category === window.analyticsCategoryFilter;
 
-    function renderMainChart(history) {
-        if (!history || history.length < 2) {
-            mainChartContainer.innerHTML = '<p style="text-align:center; color: var(--text-sec); padding-top: 50px;">Not enough data.</p>'; return;
-        }
-        const width = mainChartContainer.offsetWidth; if (width === 0) return;
-        const height = 350, padding = 40;
-        const values = history.map(h => h.value), maxVal = Math.max(...values, 0), minVal = 0;
+                    return matchesSearch && matchesName && matchesCategory;
+                });
 
-        const points = history.map((point, index) => {
-            const x = history.length === 1 ? width / 2 : padding + (index / (history.length - 1)) * (width - (padding * 2));
-            const y = (height - padding) - ((point.value - minVal) / (maxVal - minVal || 1)) * (height - (padding * 2));
-            return { x, y, val: point.value, date: point.date };
-        });
+                const assetPerformance = {};
+                let totalCurrentValue = 0,
+                    totalGainLoss = 0;
 
-        let svgContent = `<svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
-        if (points.length > 1) svgContent += `<polyline points="${points.map(p => `${p.x},${p.y}`).join(' ')}" class="graph-line" />`;
+                filteredAssetIds.forEach(id => {
+                    const history = assetHistory[id];
+                    if (!history || history.length === 0) return;
+                    const currentValue = history[history.length - 1].value;
+                    const creationDate = parseDate(history[0].date);
+                    const creationValue = history[0].value;
+
+                    let startValue = (days === 0) ? creationValue : ((creationDate >= periodStartDate) ? creationValue : findValueAtDate(history, comparisonDate));
+                    const changeValue = currentValue - startValue;
+                    let changePercent = (startValue > 0) ? (changeValue / startValue) * 100 : null;
+
+                    assetPerformance[id] = { name: assetMeta[id].name, category: assetMeta[id].category, currentValue, changeValue, changePercent };
+                    totalGainLoss += changeValue;
+                    totalCurrentValue += currentValue;
+                });
+
+                const sortedAssets = Object.values(assetPerformance).sort((a, b) => b.changeValue - a.changeValue);
+                const bestPerformer = sortedAssets[0] || { name: 'N/A', changeValue: 0 };
+                const worstPerformer = sortedAssets[sortedAssets.length - 1] || { name: 'N/A', changeValue: 0 };
+                const totalStartValue = totalCurrentValue - totalGainLoss;
+                const kpiData = { totalValue: totalCurrentValue, totalGainLoss, totalGainLossPercent: (totalStartValue > 0) ? (totalGainLoss / totalStartValue) * 100 : 0, bestPerformer, worstPerformer };
+
+                const allPoints = [];
+                filteredAssetIds.forEach(id => {
+                    const h = assetHistory[id];
+                    if (h) allPoints.push(...h.map(p => parseDate(p.date)));
+                });
+                const uniqueTimestamps = [...new Set(allPoints.filter(Boolean).map(d => d.getTime()))];
+
+                let historyTimestamps;
+                if (days > 0) {
+                    historyTimestamps = uniqueTimestamps.filter(ts => ts >= periodStartDate.getTime() && ts <= endDate.getTime());
+                    let anchorTs = 0;
+                    uniqueTimestamps.forEach(ts => { if (ts < periodStartDate.getTime() && ts > anchorTs) anchorTs = ts; });
+                    if (anchorTs > 0) historyTimestamps.unshift(anchorTs);
+                } else { historyTimestamps = uniqueTimestamps; }
+
+                historyTimestamps.sort((a, b) => a - b);
+
+                const aggregatedHistory = [...new Set(historyTimestamps)].map(timestamp => {
+                    const dateObj = new Date(timestamp);
+                    let dailyTotal = 0;
+                    filteredAssetIds.forEach(id => { dailyTotal += findValueAtDate(assetHistory[id], dateObj); });
+                    return { date: dateObj, value: dailyTotal };
+                });
+
+                return { kpiData, aggregatedHistory, assetPerformance };
+            }
+
+            function renderAnalytics() {
+                updateAnalyticsDropdowns();
+
+                const { kpiData, aggregatedHistory, assetPerformance } = processData(activeTimeframe);
+
+                if ((!kpiData.totalValue && kpiData.totalValue !== 0) || Object.keys(kpiData).length === 0) {
+                    mainChartContainer.innerHTML = '<p style="text-align:center; color: var(--text-sec); padding-top: 50px;">No matching data.</p>';
+                    document.getElementById('kpi-total-value').textContent = '$0.00';
+                    document.getElementById('kpi-gain-loss').textContent = '$0.00';
+                    document.getElementById('kpi-gain-loss').className = 'kpi-value';
+                    document.getElementById('kpi-gain-loss-percent').textContent = '(0.00%)';
+                    document.getElementById('kpi-gain-loss-percent').className = 'kpi-sub';
+                    document.getElementById('kpi-best-performer').textContent = 'N/A';
+                    document.getElementById('kpi-best-performer-change').textContent = '+$0.00';
+                    document.getElementById('kpi-worst-performer').textContent = 'N/A';
+                    document.getElementById('kpi-worst-performer-change').textContent = '-$0.00';
+                    document.getElementById('asset-performance-tbody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-sec);">No assets match filters</td></tr>';
+                    return;
+                }
+
+                document.getElementById('kpi-total-value').textContent = formatCurrency(kpiData.totalValue);
+                document.getElementById('kpi-gain-loss').textContent = formatCurrency(kpiData.totalGainLoss, true);
+                document.getElementById('kpi-gain-loss').className = `kpi-value ${kpiData.totalGainLoss >= 0 ? 'green' : 'red'}`;
+                document.getElementById('kpi-gain-loss-percent').textContent = `(${kpiData.totalGainLossPercent.toFixed(2)}%)`;
+                document.getElementById('kpi-gain-loss-percent').className = `kpi-sub ${kpiData.totalGainLoss >= 0 ? 'green' : 'red'}`;
+                document.getElementById('kpi-best-performer').textContent = kpiData.bestPerformer.name;
+                document.getElementById('kpi-best-performer-change').textContent = formatCurrency(kpiData.bestPerformer.changeValue, true);
+                document.getElementById('kpi-worst-performer').textContent = kpiData.worstPerformer.name;
+                document.getElementById('kpi-worst-performer-change').textContent = formatCurrency(kpiData.worstPerformer.changeValue, true);
+
+                renderMainChart(aggregatedHistory);
+                renderAssetTable(assetPerformance);
+            }
+
+            function renderMainChart(history) {
+                if (!history || history.length < 2) {
+                    mainChartContainer.innerHTML = '<p style="text-align:center; color: var(--text-sec); padding-top: 50px;">Not enough data.</p>';
+                    return;
+                }
+                const width = mainChartContainer.offsetWidth;
+                if (width === 0) return;
+                const height = 350,
+                    padding = 40;
+                const values = history.map(h => h.value),
+                    maxVal = Math.max(...values, 0),
+                    minVal = 0;
+
+                const points = history.map((point, index) => {
+                    const x = history.length === 1 ? width / 2 : padding + (index / (history.length - 1)) * (width - (padding * 2));
+                    const y = (height - padding) - ((point.value - minVal) / (maxVal - minVal || 1)) * (height - (padding * 2));
+                    return { x, y, val: point.value, date: point.date };
+                });
+
+                let svgContent = `<svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+                if (points.length > 1) svgContent += `<polyline points="${points.map(p => `${p.x},${p.y}`).join(' ')}" class="graph-line" />`;
 
         const pointsToShow = new Set([0, points.length - 1]);
         if (points.length <= 10) for (let i = 0; i < points.length; i++) pointsToShow.add(i);
@@ -1611,7 +1619,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === ВСТАВЬТЕ СЮДА ИМЯ ВАШЕГО БОТА (без @) ===
-    const BOT_USERNAME = "fimax_tracker_bot";
+    const BOT_USERNAME = "fimaxbot";
 
     // === 1. ЛОГИКА ПРОМОКОДОВ ===
     function applyPromoCode(event) {
