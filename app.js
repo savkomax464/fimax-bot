@@ -1677,28 +1677,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === 2. ЛОГИКА ОПЛАТЫ TELEGRAM STARS ===
+    // === ДИНАМИЧЕСКОЕ ПОЛУЧЕНИЕ ИМЕНИ БОТА ===
+    const urlParams = new URLSearchParams(window.location.search);
+    const dynamicBotUsername = urlParams.get('bot') || "fimaxbot";
+
+    // === ЛОГИКА ОПЛАТЫ TELEGRAM STARS (МОМЕНТАЛЬНЫЙ ПЕРЕХОД) ===
     document.querySelectorAll('.subscribe-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const plan = e.target.dataset.plan;
-            const stars = e.target.dataset.stars;
-            const isRu = window.appState && window.appState.lang === 'ru';
 
             if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.showConfirm(
-                    isRu ? `Перейти к оплате ⭐️${stars}?` : `Proceed to pay ⭐️${stars}?`,
-                    (confirmed) => {
-                        if (confirmed) {
-                            // 1. Показываем тост внутри приложения
-                            if(window.showToast) showToast(isRu ? 'Создаем счет...' : 'Generating invoice...', 'info');
-
-                            // 2. Сворачиваем приложение к ТВОЕМУ боту для оплаты
-                            setTimeout(() => {
-                                window.Telegram.WebApp.openTelegramLink(`https://t.me/${dynamicBotUsername}?start=pay_${plan}`);
-                            }, 1000);
-                        }
-                    }
-                );
+                // 1. Моментально перенаправляем в чат к боту с нужной командой
+                window.Telegram.WebApp.openTelegramLink(`https://t.me/${dynamicBotUsername}?start=pay_${plan}`);
+                
+                // 2. Принудительно закрываем (сворачиваем) WebApp
+                window.Telegram.WebApp.close();
             }
         });
     });
