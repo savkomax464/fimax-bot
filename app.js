@@ -1619,7 +1619,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === ВСТАВЬТЕ СЮДА ИМЯ ВАШЕГО БОТА (без @) ===
-    const BOT_USERNAME = "fimax_tracker_bot";
+    const BOT_USERNAME = "fimaxbot";
 
     // === 1. ЛОГИКА ПРОМОКОДОВ ===
     function applyPromoCode(event) {
