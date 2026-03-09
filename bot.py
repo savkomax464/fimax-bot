@@ -221,7 +221,19 @@ async def handle_webapp_data(message: types.Message):
             code = data.get("code")
             days = await use_promocode(code)
             if days:
-                await update_subscription(user_id, days)
+                new_end = await update_subscription(user_id, days)
+                
+                kb = types.InlineKeyboardMarkup(inline_keyboard=[[
+                    types.InlineKeyboardButton(text="📱 Open FiMax (Premium)", web_app=WebAppInfo(url=f"{WEBAPP_URL}?sub_end={new_end.isoformat()}"))
+                ]])
+                
+                await message.answer(
+                    f"✅ Promo code applied! {days} days added.\nValid until: <b>{new_end.strftime('%Y-%m-%d')}</b>",
+                    parse_mode="HTML", 
+                    reply_markup=kb
+                )
+            else:
+                await message.answer("❌ Invalid or expired promo code.")
     except Exception as e:
         print(f"Error handling webapp data: {e}")
 

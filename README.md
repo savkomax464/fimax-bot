@@ -77,8 +77,8 @@ docker-compose up -d
 | Plan | Stars | Duration |
 |------|-------|----------|
 | 1 Month | 150 ⭐ | 30 days |
-| 6 Months | 750 ⭐ | 180 days |
-| 1 Year | 1200 ⭐ | 365 days |
+| 6 Months | 700 ⭐ | 180 days |
+| 1 Year | 1000 ⭐ | 365 days |
 
 ## License
 
