@@ -1687,11 +1687,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const plan = e.target.dataset.plan;
 
             if (window.Telegram && window.Telegram.WebApp) {
-                // 1. Моментально перенаправляем в чат к боту с нужной командой
+                // 1. Открываем чат с ботом
                 window.Telegram.WebApp.openTelegramLink(`https://t.me/${dynamicBotUsername}?start=pay_${plan}`);
                 
-                // 2. Принудительно закрываем (сворачиваем) WebApp
-                window.Telegram.WebApp.close();
+                // 2. Даем Телеграму долю секунды на переход, а затем принудительно сворачиваем окно
+                setTimeout(() => {
+                    window.Telegram.WebApp.close();
+                }, 100);
             }
         });
     });
