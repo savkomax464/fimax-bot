@@ -12,7 +12,7 @@ window.AppStorage = {
     // Проверяем, доступно ли облако (если открыто в браузере вне ТГ, будет fallback на localStorage)
     isSupported: !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.CloudStorage),
 
-    asyncset(key, value) {
+    async set(key, value) {
         if (!this.isSupported) return localStorage.setItem(key, value);
 
         return new Promise((resolve, reject) => {
@@ -39,7 +39,7 @@ window.AppStorage = {
         });
     },
 
-    asyncget(key) {
+    async get(key) {
         if (!this.isSupported) return localStorage.getItem(key);
 
         return new Promise((resolve, reject) => {
@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
         tg.ready();
         tg.expand();
 
-        const tgUser = tg.initDataUnsafe ? .user;
+        const tgUser = tg.initDataUnsafe?.user;
         if (tgUser) {
             const firstName = tgUser.first_name || '';
             const lastName = tgUser.last_name || '';
