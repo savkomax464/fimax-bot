@@ -1477,8 +1477,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ["Export Data", "Экспорт данных"],
             ["Dedicated Manager", "Личный менеджер"],
             ["Early Access", "Ранний доступ"],
-            ["By activating, you agree to our", "Активируя подписку, вы соглашаетесь с"],
-            ["Privacy Policy", "Политикой конфиденциальности"],
+            ["By activating the trial or premium, you agree to our", "Активируя пробный период или премиум, вы соглашаетесь с"],
+            ["Privacy Policy & Terms of Service", "Политикой конфиденциальности и условиями использования"],
             ["Premium active for:", "Премиум активен:"]
         ];
 
@@ -1844,6 +1844,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ПРАВИЛЬНЫЙ ПОРЯДОК ЗАПУСКА
     (async function initApp() {
+        // Добавляем эту строку, чтобы меню было закрыто при входе
+        if (window.innerWidth <= 900) document.body.classList.add('sidebar-closed');
+
         await loadSettings();       // Сначала загружаем язык
         await syncSubscriptionUI(); // Проверяем статус Premium
 

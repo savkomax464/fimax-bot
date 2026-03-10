@@ -2548,3 +2548,19 @@ input:focus, textarea:focus, select:focus, button:focus {
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2) !important;
     }
 }
+
+/* Фикс цвета текста для добавленных меток (sub-tags) в светлой теме */
+[data-theme="light"] .sub-pill {
+    color: #000 !important;
+    background: rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    font-weight: 700 !important;
+}
+
+[data-theme="light"] .sub-pill span {
+    color: rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="light"] .sub-pill span:hover {
+    color: var(--loss-red) !important;
+}
