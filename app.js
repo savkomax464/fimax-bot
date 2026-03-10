@@ -1836,4 +1836,41 @@ document.addEventListener('DOMContentLoaded', () => {
     syncSubscriptionUI();
 
     loadSettings();
+
+    // === ЛОГИКА ОКНА ПОЛИТИКИ КОНФИДЕНЦИАЛЬНОСТИ ===
+    const privacyModal = document.getElementById('privacy-modal');
+    const openPrivacyBtn = document.getElementById('open-privacy');
+    const closePrivacyIcon = document.getElementById('close-privacy');
+    const acceptPrivacyBtn = document.getElementById('accept-privacy-btn');
+
+    // Открыть окно
+    if (openPrivacyBtn) {
+        openPrivacyBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (privacyModal) privacyModal.style.display = 'flex';
+        });
+    }
+
+    // Закрыть окно (крестик)
+    if (closePrivacyIcon) {
+        closePrivacyIcon.addEventListener('click', () => {
+            if (privacyModal) privacyModal.style.display = 'none';
+        });
+    }
+
+    // Закрыть окно (кнопка согласия)
+    if (acceptPrivacyBtn) {
+        acceptPrivacyBtn.addEventListener('click', () => {
+            if (privacyModal) privacyModal.style.display = 'none';
+        });
+    }
+
+    // Закрыть при клике вне окна
+    if (privacyModal) {
+        window.addEventListener('click', (e) => {
+            if (e.target === privacyModal) {
+                privacyModal.style.display = 'none';
+            }
+        });
+    }
 });

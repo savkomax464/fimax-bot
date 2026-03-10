@@ -370,6 +370,13 @@
                         <p>Get access to exclusive analytics. Cancel anytime.</p>
                         <!-- Кнопка триала и таймер -->
                         <button class="btn-add blue-btn" id="activate-trial-btn" style="margin-top: 20px; padding: 16px 32px; font-size: 16px;">Activate 7 Days Free</button>
+                        
+                        <!-- Текст согласия -->
+                        <p style="font-size: 12px; color: var(--text-sec); margin-top: 12px; line-height: 1.4;">
+                            By activating the trial or premium, you agree to our <br>
+                            <a href="#" id="open-privacy" style="color: var(--profit-green); text-decoration: underline;">Privacy Policy & Terms of Service</a>.
+                        </p>
+                        
                         <div id="premium-timer-container" style="display: none; margin-top: 20px;">
                             <p style="color: var(--text-sec); font-size: 14px; margin-bottom: 5px;" class="i18n-timer-label">Premium active for:</p>
                             <div id="premium-timer" style="font-size: 24px; font-weight: 800; color: var(--profit-green); font-variant-numeric: tabular-nums;">00:00:00:00</div>
@@ -517,6 +524,27 @@
 
         </main>
     </div>
+    
+    <!-- Модальное окно Политики конфиденциальности -->
+    <div id="privacy-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content privacy-content">
+            <span class="close-modal" id="close-privacy">&times;</span>
+            <h2 style="margin-bottom: 15px;">Privacy Policy & Terms</h2>
+            <div class="privacy-text" style="text-align: left; font-size: 14px; color: var(--text-sec); max-height: 50vh; overflow-y: auto; line-height: 1.5;">
+                <p><b>1. Data Collection:</b> To provide our services, we collect your Telegram User ID, Username, and subscription status. We do not collect any outside personal data.</p>
+                <br>
+                <p><b>2. Data Usage:</b> We use this data strictly to grant you access to FiMax Premium, synchronize your account across devices, and provide portfolio analytics.</p>
+                <br>
+                <p><b>3. Third Parties & Payments:</b> Subscriptions are processed securely via Telegram ecosystem. We do not process, collect, or store your credit card information.</p>
+                <br>
+                <p><b>4. User Rights:</b> You have the right to request the deletion of your account and associated data at any time by contacting our support.</p>
+                <br>
+                <p><i>By using this application and activating a trial or premium plan, you consent to these terms.</i></p>
+            </div>
+            <button class="btn-add blue-btn" id="accept-privacy-btn" style="margin-top: 20px; width: 100%;">I Understand & Agree</button>
+        </div>
+    </div>
+    
     <script src="app.js"></script>
 </body>
 
