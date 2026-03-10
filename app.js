@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    showPage('main');
+    // showPage('main'); // Убрали, чтобы дождаться проверки подписки
 
     const sidebarToggleBtns = document.querySelectorAll('.sidebar-toggle-btn');
     sidebarToggleBtns.forEach(btn => {
@@ -1463,13 +1463,23 @@ document.addEventListener('DOMContentLoaded', () => {
             ["Performance Graph", "Изменение цены"], ["Quick Labels", "Быстрые метки"],
             ["Start your 7-Day Free Trial", "Начни 7 дней бесплатно"],
             ["Get access to exclusive analytics. Cancel anytime.", "Полный доступ к аналитике. Отмена в любой момент."],
-            ["1 Month", "1 Месяц"],
-            ["6 Months", "6 Месяцев"],
-            ["1 Year", "1 Год"],
-            ["/ month", "/ месяц"],
-            ["/ 6 months", "/ 6 мес."],
-            ["/ year", "/ год"],
-            ["✓ 7-Day Free Trial", "✓ 7 дней бесплатно"]
+            ["1 Month", "1 Месяц"], ["6 Months", "6 Месяцев"], ["1 Year", "1 Год"],
+            ["/ month", "/ месяц"], ["/ 6 months", "/ 6 мес."], ["/ year", "/ год"],
+            ["✓ 7-Day Free Trial", "✓ 7 дней бесплатно"],
+            
+            // НОВЫЕ ПЕРЕВОДЫ:
+            ["Equity", "Капитал"],
+            ["Receive a summary of your portfolio performance.", "Получать сводку изменений вашего портфеля."],
+            ["Permanently delete all data. This action cannot be undone.", "Безвозвратно удалить все данные. Это действие нельзя отменить."],
+            ["Advanced Analytics", "Продвинутая аналитика"],
+            ["Unlimited Assets", "Безлимит активов"],
+            ["AI Recommendations", "ИИ Рекомендации"],
+            ["Export Data", "Экспорт данных"],
+            ["Dedicated Manager", "Личный менеджер"],
+            ["Early Access", "Ранний доступ"],
+            ["By activating, you agree to our", "Активируя подписку, вы соглашаетесь с"],
+            ["Privacy Policy", "Политикой конфиденциальности"],
+            ["Premium active for:", "Премиум активен:"]
         ];
 
         // 1. Обновляем базовые кнопки (только если текст реально изменился)
@@ -1481,7 +1491,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(clearDataBtn && clearDataBtn.textContent !== t.clear) clearDataBtn.textContent = t.clear;
 
         // 2. Переводим все тексты на сайте
-        const selectors = 'h1, h2, h3, h4, span, b, .nav-text, th, td, .det-btn, .rec-btn, .tag-white, .card-label, label, .stat-label, .pulse-name';
+        const selectors = 'h1, h2, h3, h4, span, b, p, li, a, .nav-text, th, td, .det-btn, .rec-btn, .tag-white, .card-label, label, .stat-label, .pulse-name, .card-title, .hint-text';
         document.querySelectorAll(selectors).forEach(el => {
             el.childNodes.forEach(node => {
                 if (node.nodeType === 3) { 
@@ -1809,7 +1819,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Если пользователь загрузился на Dashboard, выкидываем его в Account
             const activePage = document.querySelector('.page.active')?.id.replace('page-', '');
-            if (activePage !== 'account' && activePage !== 'settings') {
+            if (activePage && activePage !== 'account' && activePage !== 'settings') {
                 showPage('account');
             }
         }
@@ -1832,10 +1842,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Запускаем синхронизацию интерфейса
-    syncSubscriptionUI();
+    // ПРАВИЛЬНЫЙ ПОРЯДОК ЗАПУСКА
+    (async function initApp() {
+        await loadSettings();       // Сначала загружаем язык
+        await syncSubscriptionUI(); // Проверяем статус Premium
 
-    loadSettings();
+        // Если подписка есть — открываем дашборд. Если нет — аккаунт.
+        if (window.appState.isPremiumActive) {
+            showPage('main');
+        } else {
+            showPage('account');
+        }
+    })();
 
     // === ЛОГИКА ОКНА ПОЛИТИКИ КОНФИДЕНЦИАЛЬНОСТИ ===
     const privacyModal = document.getElementById('privacy-modal');
