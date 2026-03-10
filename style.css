@@ -2477,3 +2477,74 @@ input:focus, textarea:focus, select:focus, button:focus {
     border: 1px solid rgba(255, 255, 255, 0.8) !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04) !important;
 }
+
+/* ================================================================== */
+/* === ИСПРАВЛЕНИЯ ВИДИМОСТИ В СВЕТЛОЙ ТЕМЕ И ПОЗИЦИИ МЕНЮ === */
+/* ================================================================== */
+
+/* 1. Делаем кнопки Recommendations, Details и Edit темными и видимыми в светлой теме */
+[data-theme="light"] .rec-btn,
+[data-theme="light"] .edit-btn,
+[data-theme="light"] .det-btn {
+    color: #000 !important;
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-theme="light"] .rec-btn:hover,
+[data-theme="light"] .edit-btn:hover,
+[data-theme="light"] .det-btn:hover {
+    background: rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] .del-btn {
+    color: var(--loss-red) !important;
+    border-color: rgba(255, 69, 58, 0.3) !important;
+    background: rgba(255, 69, 58, 0.05) !important;
+}
+
+/* 2. Делаем значения Total Balance, Amount и надписи "Quick Labels" контрастнее */
+[data-theme="light"] .total-balance {
+    background: none !important;
+    -webkit-text-fill-color: #000 !important;
+    color: #000 !important;
+}
+
+[data-theme="light"] .amount-text {
+    color: #000 !important;
+}
+
+[data-theme="light"] .card-label {
+    color: #666 !important;
+    font-weight: 800 !important;
+}
+
+[data-theme="light"] .asset-table th {
+    color: #555 !important;
+    font-weight: 700 !important;
+}
+
+/* 3. Центрируем всплывающие окна (Метки, Изменение цены) на телефонах */
+/* Убираем их с нижней части экрана, чтобы клавиатура их не перекрывала */
+@media (max-width: 768px) {
+    .rec-popover,
+    #page-portfolio .rec-popover {
+        position: fixed !important;
+        top: 50% !important;
+        bottom: auto !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 90% !important;
+        max-width: 400px !important;
+        border-radius: 24px !important;
+        padding: 25px !important;
+        margin: 0 !important;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8) !important;
+    }
+
+    /* Делаем правильную тень для всплывающего окна в светлой теме */
+    [data-theme="light"] .rec-popover,
+    [data-theme="light"] #page-portfolio .rec-popover {
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2) !important;
+    }
+}
