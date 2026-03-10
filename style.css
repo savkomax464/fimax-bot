@@ -2404,3 +2404,76 @@ input:focus, textarea:focus, select:focus, button:focus {
 .close-modal:hover {
     color: #fff;
 }
+
+/* ================================================================== */
+/* === ФИКСЫ ФИЛЬТРОВ И КАРТОЧЕК ДЛЯ СВЕТЛОЙ ТЕМЫ === */
+/* ================================================================== */
+
+/* Базовые стили для новых кнопок фильтров */
+.filter-dropdown-btn {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 5px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+.filter-dropdown-btn.active {
+    background: #fff;
+    color: #000;
+}
+.active-pill {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: #fff !important;
+}
+
+/* 1. Адаптация текста и кнопок в светлой теме */
+[data-theme="light"] .filter-dropdown-btn {
+    background: rgba(0, 0, 0, 0.05);
+    color: #000;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .filter-dropdown-btn.active {
+    background: #000;
+    color: #fff;
+}
+[data-theme="light"] .active-pill {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.2) !important;
+    color: #000 !important;
+}
+/* Фикс крестика удаления метки */
+[data-theme="light"] .remove-tag-btn {
+    color: rgba(0, 0, 0, 0.5);
+}
+/* Фикс белых цифр статистики в Portfolio -> "Общий баланс категорий" */
+[data-theme="light"] .stat-val {
+    color: #000 !important;
+}
+
+/* 2. ВОЗВРАЩАЕМ ЭФФЕКТ СТЕКЛА ДЛЯ ВСЕХ КАРТОЧЕК В СВЕТЛОЙ ТЕМЕ */
+[data-theme="light"] .card,
+[data-theme="light"] .stat-card,
+[data-theme="light"] .kpi-card {
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(30px) !important;
+    -webkit-backdrop-filter: blur(30px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Главный блок "Общий баланс" в Портфеле (Градиентное стекло) */
+[data-theme="light"] .stat-main,
+[data-theme="light"] .perf-gradient {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%) !important;
+    backdrop-filter: blur(30px) !important;
+    -webkit-backdrop-filter: blur(30px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04) !important;
+}

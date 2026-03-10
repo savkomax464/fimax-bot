@@ -360,17 +360,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const uniqueCategories = [...new Set(Object.values(assetMeta).map(m => m.category))].filter(Boolean);
                 const uniqueNames = [...new Set(Object.values(assetMeta).map(m => m.name))].filter(Boolean);
 
-                let nameHtml = `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${window.analyticsNameFilter === null ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${window.analyticsNameFilter === null ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsNameFilter('')">${isRu ? 'Все активы' : 'All Asset Names'}</button>`;
+                let nameHtml = `<button class="filter-dropdown-btn ${window.analyticsNameFilter === null ? 'active' : ''}" onclick="setAnalyticsNameFilter('')">${isRu ? 'Все активы' : 'All Asset Names'}</button>`;
                 uniqueNames.forEach(name => {
                     const isActive = window.analyticsNameFilter === name;
-                    nameHtml += `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${isActive ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${isActive ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsNameFilter('${name}')">${name}</button>`;
+                    nameHtml += `<button class="filter-dropdown-btn ${isActive ? 'active' : ''}" onclick="setAnalyticsNameFilter('${name}')">${name}</button>`;
                 });
                 nameListEl.innerHTML = nameHtml;
 
-                let catHtml = `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${window.analyticsCategoryFilter === null ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${window.analyticsCategoryFilter === null ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsCategoryFilter('')">${isRu ? 'Все категории' : 'All Categories'}</button>`;
+                let catHtml = `<button class="filter-dropdown-btn ${window.analyticsCategoryFilter === null ? 'active' : ''}" onclick="setAnalyticsCategoryFilter('')">${isRu ? 'Все категории' : 'All Categories'}</button>`;
                 uniqueCategories.forEach(cat => {
                     const isActive = window.analyticsCategoryFilter === cat;
-                    catHtml += `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${isActive ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${isActive ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setAnalyticsCategoryFilter('${cat}')">${cat}</button>`;
+                    catHtml += `<button class="filter-dropdown-btn ${isActive ? 'active' : ''}" onclick="setAnalyticsCategoryFilter('${cat}')">${cat}</button>`;
                 });
                 catListEl.innerHTML = catHtml;
             }
@@ -1081,20 +1081,20 @@ function updateFilterDropdown() {
 
     // --- ГЕНЕРАЦИЯ СПИСКА ИМЕН ---
     if (nameListEl) {
-        let nameHtml = `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${window.activeNameFilter === null ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${window.activeNameFilter === null ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setNameFilter('')">${isRu ? 'Все активы' : 'All Asset Names'}</button>`;
+        let nameHtml = `<button class="filter-dropdown-btn ${window.activeNameFilter === null ? 'active' : ''}" onclick="setNameFilter('')">${isRu ? 'Все активы' : 'All Asset Names'}</button>`;
         uniqueNames.forEach(name => {
             const isActive = window.activeNameFilter === name;
-            nameHtml += `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${isActive ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${isActive ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setNameFilter('${name}')">${name}</button>`;
+            nameHtml += `<button class="filter-dropdown-btn ${isActive ? 'active' : ''}" onclick="setNameFilter('${name}')">${name}</button>`;
         });
         nameListEl.innerHTML = nameHtml;
     }
 
     // --- ГЕНЕРАЦИЯ СПИСКА КАТЕГОРИЙ ---
     if (catListEl) {
-        let catHtml = `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${window.activeCategoryFilter === null ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${window.activeCategoryFilter === null ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setCategoryFilter('')">${isRu ? 'Все категории' : 'All Categories'}</button>`;
+        let catHtml = `<button class="filter-dropdown-btn ${window.activeCategoryFilter === null ? 'active' : ''}" onclick="setCategoryFilter('')">${isRu ? 'Все категории' : 'All Categories'}</button>`;
         uniqueCategories.forEach(cat => {
             const isActive = window.activeCategoryFilter === cat;
-            catHtml += `<button class="tag-white" style="width:100%; text-align:left; margin-bottom: 5px; background: ${isActive ? '#fff' : 'rgba(255,255,255,0.05)'} !important; color: ${isActive ? '#000' : '#fff'} !important; border: 1px solid var(--border);" onclick="setCategoryFilter('${cat}')">${cat}</button>`;
+            catHtml += `<button class="filter-dropdown-btn ${isActive ? 'active' : ''}" onclick="setCategoryFilter('${cat}')">${cat}</button>`;
         });
         catListEl.innerHTML = catHtml;
     }
@@ -1197,7 +1197,7 @@ function renderGlobalTags() {
     container.innerHTML = globalSelectedTags.map((t, index) => {
         const displayPrice = t.price ? `$${t.price}` : '$0.00'; 
         return `<div class="rec-wrapper" style="display:inline-block; margin-right:8px; margin-bottom:8px;">
-            <div class="pill" style="background: rgba(255,255,255,0.05); border-color: #fff;" onclick="event.stopPropagation(); togglePricePop(${index})">
+            <div class="pill active-pill" onclick="event.stopPropagation(); togglePricePop(${index})">
                 ${t.name} <span style="font-size:10px; opacity:0.6; margin-left:6px;">${displayPrice}</span>
                 <span class="remove-tag-btn" onclick="event.stopPropagation(); removeGlobalTag('${t.name}')">✕</span>
             </div>
