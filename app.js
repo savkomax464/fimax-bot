@@ -1692,8 +1692,21 @@ document.addEventListener('DOMContentLoaded', () => {
         clearDataBtn.addEventListener('click', async () => {
             const msg = settings.lang === 'ru' ? 'ВЫ УВЕРЕНЫ?\nВсе данные будут удалены навсегда.' : 'ARE YOU ABSOLUTELY SURE?\nThis will permanently delete your data.';
             if (confirm(msg)) {
+                // === ЗАПОМИНАЕМ ПОДПИСКУ, ТРИАЛ И ЯЗЫК ===
+                const savedPremium = await AppStorage.get('premium_end');
+                const savedTrial = await AppStorage.get('trial_used');
+                const savedLang = await AppStorage.get('lang');
+
+                // === ОЧИЩАЕМ ВСЕ ДАННЫЕ ===
                 await AppStorage.clearAll();
-                location.reload();
+
+                // === ВОЗВРАЩАЕМ ПОДПИСКУ, ТРИАЛ И ЯЗЫК НА МЕСТО ===
+                if (savedPremium) { await AppStorage.set('premium_end', savedPremium); }
+                if (savedTrial) { await AppStorage.set('trial_used', savedTrial); }
+                if (savedLang) { await AppStorage.set('lang', savedLang); }
+
+                // Перезагружаем страницу для обновления интерфейса
+                window.location.reload();
             }
         });
     }
