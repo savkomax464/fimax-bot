@@ -162,7 +162,7 @@ async def cmd_start(message: types.Message):
     args = message.text.split()
     if len(args) > 1:
         payload = args[1]
-        
+
         # 1. Если это оплата
         if payload.startswith("pay_"):
             plan_id = payload.replace("pay_", "")
@@ -174,33 +174,55 @@ async def cmd_start(message: types.Message):
                     description=f"Subscription: {plan['name']}",
                     payload=plan_id, provider_token="", currency="XTR", prices=prices
                 )
-                
+
         # 2. Если это активация ПРОМОКОДА
         if payload.startswith("promo_"):
             code = payload.replace("promo_", "").upper()
             days = await use_promocode(code)
             if days:
                 new_end = await update_subscription(user_id, days, username)
-                sync_url = f"{WEBAPP_URL}?sub_end={new_end.isoformat()}&bot={bot_username}"
-                
+                sync_url = f"{WEBAPP_URL}?sub_end={new_end.isoformat()}&trial_used={str(user.trial_used).lower()}&bot={bot_username}"
+
                 kb = types.InlineKeyboardMarkup(inline_keyboard=[[
                     types.InlineKeyboardButton(text="📱 Open FiMax (Premium)", web_app=WebAppInfo(url=sync_url))
                 ]])
-                
+
                 return await message.answer(
                     f"✅ Promo code applied! {days} days added.\nValid until: <b>{new_end.strftime('%Y-%m-%d')}</b>",
-                    parse_mode="HTML", 
+                    parse_mode="HTML",
                     reply_markup=kb
                 )
             else:
                 return await message.answer("❌ Invalid or expired promo code.")
 
+        # 3. Если это активация ПРОБНОГО ПЕРИОДА
+        if payload == "trial":
+            if user and user.trial_used:
+                return await message.answer("❌ You have already used your free trial.")
+            else:
+                new_end = await update_subscription(user_id, 7, username)
+                await set_trial_used(user_id)
+                sync_url = f"{WEBAPP_URL}?sub_end={new_end.isoformat()}&trial_used=true&bot={bot_username}"
+
+                kb = types.InlineKeyboardMarkup(inline_keyboard=[[
+                    types.InlineKeyboardButton(text="📱 Open FiMax (Premium)", web_app=WebAppInfo(url=sync_url))
+                ]])
+
+                return await message.answer(
+                    f"✅ 7-Day Free Trial activated!\nValid until: <b>{new_end.strftime('%Y-%m-%d %H:%M')}</b>",
+                    parse_mode="HTML",
+                    reply_markup=kb
+                )
+
     # Обычный старт
     sub_end_iso = "none"
-    if user and user.subscription_end:
-        sub_end_iso = user.subscription_end.isoformat()
+    trial_used = "false"
+    if user:
+        trial_used = str(user.trial_used).lower()
+        if user.subscription_end:
+            sub_end_iso = user.subscription_end.isoformat()
 
-    sync_url = f"{WEBAPP_URL}?sub_end={sub_end_iso}&bot={bot_username}"
+    sync_url = f"{WEBAPP_URL}?sub_end={sub_end_iso}&trial_used={trial_used}&bot={bot_username}"
 
     # Создаем INLINE кнопку (под сообщением) вместо нижней клавиатуры
     inline_kb = types.InlineKeyboardMarkup(inline_keyboard=[[
@@ -229,18 +251,18 @@ async def handle_webapp_data(message: types.Message):
             days = await use_promocode(code)
             if days:
                 new_end = await update_subscription(user_id, days, message.from_user.username)
-                
+
                 bot_me = await bot.get_me()
-                sync_url = f"{WEBAPP_URL}?sub_end={new_end.isoformat()}&bot={bot_me.username}"
-                
+                sync_url = f"{WEBAPP_URL}?sub_end={new_end.isoformat()}&trial_used=true&bot={bot_me.username}"
+
                 kb = types.ReplyKeyboardMarkup(
                     keyboard=[[types.KeyboardButton(text="📱 Open FiMax (Premium)", web_app=WebAppInfo(url=sync_url))]],
                     resize_keyboard=True
                 )
-                
+
                 await message.answer(
                     f"✅ Promo code applied! {days} days added.\nValid until: <b>{new_end.strftime('%Y-%m-%d')}</b>",
-                    parse_mode="HTML", 
+                    parse_mode="HTML",
                     reply_markup=kb
                 )
             else:
@@ -261,10 +283,10 @@ async def process_successful_payment(message: types.Message):
     if plan_id in PLANS:
         days = PLANS[plan_id]["days"]
         new_end = await update_subscription(user_id, days, message.from_user.username)
-        
+
         bot_me = await bot.get_me()
-        sync_url = f"{WEBAPP_URL}?sub_end={new_end.isoformat()}&bot={bot_me.username}"
-        
+        sync_url = f"{WEBAPP_URL}?sub_end={new_end.isoformat()}&trial_used=true&bot={bot_me.username}"
+
         kb = types.ReplyKeyboardMarkup(
             keyboard=[[types.KeyboardButton(text="📱 Open FiMax (Premium)", web_app=WebAppInfo(url=sync_url))]],
             resize_keyboard=True

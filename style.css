@@ -2358,3 +2358,10 @@ input:focus, textarea:focus, select:focus, button:focus {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
+
+/* Блокировка отключенных элементов меню */
+.nav-item.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+    cursor: not-allowed;
+}

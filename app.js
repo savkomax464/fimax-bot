@@ -263,7 +263,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const navLinks = document.querySelectorAll('.nav-link');
     const pages = document.querySelectorAll('.page');
 
+    // Глобальное состояние для проверки подписки
+    window.appState.isPremiumActive = false;
+
     function showPage(pageId) {
+        // БЛОКИРОВКА: Если нет подписки, пускаем только в Account и Settings
+        const allowedPages = ['account', 'settings'];
+        if (!window.appState.isPremiumActive && !allowedPages.includes(pageId)) {
+            const isRu = window.appState.lang === 'ru';
+            if (window.showToast) window.showToast(isRu ? 'Требуется подписка или пробный период!' : 'Premium or Trial required!', 'error');
+            pageId = 'account'; // Принудительно перекидываем в аккаунт
+        }
+
         pages.forEach(page => page.classList.remove('active'));
         navLinks.forEach(link => link.classList.remove('active'));
 
@@ -1692,13 +1703,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // === СИНХРОНИЗАЦИЯ СТАТУСА ПОДПИСКИ (ОБНОВЛЕНИЕ БЕЙДЖА "PREMIUM") ===
+    // === СИНХРОНИЗАЦИЯ СТАТУСА ПОДПИСКИ И ТРИАЛА ===
+    let timerInterval = null;
+
     async function syncSubscriptionUI() {
         const urlParams = new URLSearchParams(window.location.search);
         let subEndStr = urlParams.get('sub_end');
+        let trialUsedStr = urlParams.get('trial_used');
 
-        // 1. Моментально берем дату из URL, если она есть (чтобы UI обновился мгновенно)
-        // и параллельно сохраняем в облако
+        // Обработка данных из URL или Облака
         if (subEndStr !== null) {
             if (subEndStr === "none") {
                 AppStorage.set('premium_end', '');
@@ -1707,46 +1720,119 @@ document.addEventListener('DOMContentLoaded', () => {
                 AppStorage.set('premium_end', subEndStr);
             }
         } else {
-            // Если открыли приложение как-то иначе, подгружаем из памяти
             subEndStr = await AppStorage.get('premium_end');
         }
 
-        const statusBadge = document.querySelector('.status-badge');
+        if (trialUsedStr !== null) {
+            AppStorage.set('trial_used', trialUsedStr);
+        } else {
+            trialUsedStr = await AppStorage.get('trial_used');
+        }
+
+        const isTrialUsed = trialUsedStr === 'true';
         const isRu = window.appState && window.appState.lang === 'ru';
 
-        if (statusBadge) {
-            if (subEndStr) {
-                const dateObj = new Date(subEndStr);
-                const now = new Date();
-                
-                // 2. Расчет оставшихся дней (разница между датой конца и текущей датой)
-                const diffTime = dateObj.getTime() - now.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const statusBadge = document.querySelector('.status-badge');
+        const trialBtn = document.getElementById('activate-trial-btn');
+        const timerContainer = document.getElementById('premium-timer-container');
+        const timerEl = document.getElementById('premium-timer');
+        const navItems = document.querySelectorAll('.nav-item');
 
-                if (diffDays > 0) { 
-                    // ПОДПИСКА АКТИВНА
-                    statusBadge.textContent = isRu ? `Premium (Осталось: ${diffDays} дн.)` : `Premium (${diffDays} days left)`;
-                    statusBadge.className = 'status-badge';
-                    // Включаем зеленый "премиум" дизайн
-                    statusBadge.style.background = 'rgba(48, 209, 88, 0.15)';
-                    statusBadge.style.color = 'var(--profit-green)';
-                    statusBadge.style.border = '1px solid rgba(48, 209, 88, 0.3)';
-                } else { 
-                    // ПОДПИСКА ИСТЕКЛА
-                    statusBadge.textContent = isRu ? 'Бесплатный (Истёк)' : 'Free Plan (Expired)';
-                    statusBadge.className = 'status-badge free';
-                    statusBadge.style = ''; // Сбрасываем стили
+        window.appState.isPremiumActive = false;
+        window.appState.subEnd = subEndStr;
+
+        if (subEndStr) {
+            const dateObj = new Date(subEndStr);
+            const now = new Date();
+            const diffTime = dateObj.getTime() - now.getTime();
+
+            if (diffTime > 0) {
+                window.appState.isPremiumActive = true;
+            }
+        }
+
+        // Настройка UI Триала/Таймера
+        if (window.appState.isPremiumActive) {
+            if (trialBtn) trialBtn.style.display = 'none';
+            if (timerContainer) timerContainer.style.display = 'block';
+
+            // Блокируем доступ в меню визуально
+            navItems.forEach(item => item.classList.remove('disabled'));
+
+            // Живой таймер
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const now = new Date();
+                const end = new Date(window.appState.subEnd);
+                const diff = end - now;
+
+                if (diff <= 0) {
+                    clearInterval(timerInterval);
+                    window.location.reload(); // Перезагружаем при истечении
+                } else {
+                    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                    const m = Math.floor((diff / 1000 / 60) % 60);
+                    const s = Math.floor((diff / 1000) % 60);
+                    
+                    const f = (n) => n.toString().padStart(2, '0');
+                    if (timerEl) timerEl.textContent = `${d}d ${f(h)}:${f(m)}:${f(s)}`;
                 }
+            }, 1000);
+
+        } else {
+            if (timerContainer) timerContainer.style.display = 'none';
+            
+            // Если триал уже использовали, но премиума нет - прячем кнопку
+            if (isTrialUsed) {
+                if (trialBtn) trialBtn.style.display = 'none';
+            } else {
+                if (trialBtn) {
+                    trialBtn.style.display = 'inline-block';
+                    trialBtn.textContent = isRu ? 'Активировать 7 дней' : 'Activate 7 Days Free';
+                    trialBtn.onclick = () => {
+                        if (window.Telegram && window.Telegram.WebApp) {
+                            window.Telegram.WebApp.openTelegramLink(`https://t.me/${dynamicBotUsername}?start=trial`);
+                            window.Telegram.WebApp.close();
+                        }
+                    };
+                }
+            }
+
+            // Отключаем не-премиум вкладки визуально
+            navItems.forEach(item => {
+                const page = item.getAttribute('data-page');
+                if (page !== 'account' && page !== 'settings') {
+                    item.classList.add('disabled');
+                }
+            });
+
+            // Если пользователь загрузился на Dashboard, выкидываем его в Account
+            const activePage = document.querySelector('.page.active')?.id.replace('page-', '');
+            if (activePage !== 'account' && activePage !== 'settings') {
+                showPage('account');
+            }
+        }
+
+        // Обновление бейджа профиля
+        if (statusBadge) {
+            if (window.appState.isPremiumActive) { 
+                const dateObj = new Date(subEndStr);
+                const diffDays = Math.ceil((dateObj.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                statusBadge.textContent = isRu ? `Premium (Осталось: ${diffDays} дн.)` : `Premium (${diffDays} days left)`;
+                statusBadge.className = 'status-badge';
+                statusBadge.style.background = 'rgba(48, 209, 88, 0.15)';
+                statusBadge.style.color = 'var(--profit-green)';
+                statusBadge.style.border = '1px solid rgba(48, 209, 88, 0.3)';
             } else { 
-                // ПОДПИСКИ НИКОГДА НЕ БЫЛО
-                statusBadge.textContent = isRu ? 'Бесплатный тариф' : 'Free Plan';
+                statusBadge.textContent = isRu ? (isTrialUsed ? 'Бесплатный (Истёк)' : 'Бесплатный тариф') : (isTrialUsed ? 'Free Plan (Expired)' : 'Free Plan');
                 statusBadge.className = 'status-badge free';
-                statusBadge.style = ''; // Сбрасываем стили
+                statusBadge.style = '';
             }
         }
     }
 
-    // Запускаем синхронизацию интерфейса при загрузке настроек
+    // Запускаем синхронизацию интерфейса
     syncSubscriptionUI();
 
     loadSettings();
